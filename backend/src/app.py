@@ -1,6 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import os
+from sqlalchemy import create_engine
+from src.database.session import engine
+from src.database.models import Base # noqa: F401 — import registers models on Base
+
+from src.database.session import Base
 app = FastAPI()
 
 _allowed_origins = [
@@ -16,8 +21,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+Base.metadata.create_all(bind=engine)
+
 @app.get('/')
 def root():
+
     return {
         "message": "Hello World!"
     }
