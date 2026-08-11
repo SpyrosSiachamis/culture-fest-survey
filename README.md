@@ -12,4 +12,4 @@ Survey app for the Culture Fest event (Hersonissos, Crete) — built with Next.j
 
 ## Status
 
-🚧 In development
+In development
