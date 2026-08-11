@@ -1,0 +1,34 @@
+services:
+    backend:
+        build:
+            context: ./backend
+            dockerfile: Dockerfile
+        container_name: culture-fest-backend
+        ports: 
+            - '127.0.0.1:5000:5000' 
+        env_file:
+            - ./backend/.env
+        volumes:
+            - ./backend:/app
+        command: python -m uvicorn src.app:app --host 0.0.0.0 --port 5000 --reload
+        networks:
+            - app-network
+        
+    frontend:
+        build:
+            context: ./frontend
+            dockerfile: Dockerfile
+        container_name: culture-fest-survey-frontend
+        ports:
+        - '3000:3000'
+        env_file:
+            - ./frontend/.env
+        volumes:
+            - ./frontend:/app
+            - /app/node_modules
+        command: npm run dev
+        networks:
+            - app-network
+networks:
+    app-network:
+        driver: bridge
