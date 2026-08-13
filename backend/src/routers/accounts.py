@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, logger
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from starlette import status
@@ -6,11 +6,11 @@ import datetime as dt
 from src.database.models import Account
 from src.database.session import get_db
 from src.schemas import AccountCreate, AccountRead, Token
-from fastapi import Request
 from slowapi import Limiter
 from slowapi.util import get_remote_address 
 from src.auth import ACCESS_TOKEN_EXPIRE_MINUTES, DUMMY_HASH, create_access_token, verify_password, get_password_hash, hash_identifier
 from src.schemas import LoginRequest
+
 router = APIRouter(prefix = "/accounts", tags = ['accounts'])
 limiter = Limiter(key_func=get_remote_address)
 
@@ -59,5 +59,5 @@ def login(request: Request, credentials: LoginRequest, db: Session = Depends(get
         raise HTTPException(401, "Invalid credentials")
 
     token_expiry = dt.timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    token = create_access_token(account.email_hash, account.id, token_expiry)
+    token = create_access_token(account.id, token_expiry)
     return Token(access_token=token, token_type="bearer")
