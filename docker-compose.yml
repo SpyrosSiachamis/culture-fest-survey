@@ -10,7 +10,7 @@ services:
         ports:
             - '${BACKEND_PORT}:5000'
         env_file:
-            - ./backend/.env
+            - backend/.env
         volumes:
             - ./backend:/app
         command: python -m uvicorn src.app:app --host 0.0.0.0 --port 5000 --reload

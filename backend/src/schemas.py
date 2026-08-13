@@ -10,7 +10,8 @@ class AccountCreate(pydantic.BaseModel):
     password: str
 
 class AccountRead(pydantic.BaseModel):
-    id: int
+    model_config = pydantic.ConfigDict(from_attributes=True)
+    id: str
     has_voted: bool
     created_at: dt.datetime
 
@@ -43,6 +44,14 @@ class SurveyIn(SurveyBase):
                 raise ValueError("has_student_pass is required for Students")
         return self
 
+class LoginRequest(pydantic.BaseModel):
+    email: pydantic.EmailStr
+    password: str
+
 class SurveyOut(SurveyBase):
     id: str
     submitted_at: dt.datetime
+
+class Token(pydantic.BaseModel):
+    access_token: str
+    token_type: str

@@ -4,7 +4,7 @@ import os
 from sqlalchemy import create_engine
 from src.database.session import engine
 from src.database.models import Base # noqa: F401 — import registers models on Base
-
+from src.routers import accounts
 from src.database.session import Base
 app = FastAPI()
 
@@ -25,7 +25,8 @@ Base.metadata.create_all(bind=engine)
 
 @app.get('/')
 def root():
-
     return {
         "message": "Hello World!"
     }
+
+app.include_router(accounts.router)
