@@ -8,7 +8,7 @@ from src.database.session import get_db
 from src.schemas import AccountCreate, AccountRead, Token
 from slowapi import Limiter
 from slowapi.util import get_remote_address 
-from src.auth import ACCESS_TOKEN_EXPIRE_MINUTES, DUMMY_HASH, create_access_token, verify_password, get_password_hash, hash_identifier
+from src.auth import ACCESS_TOKEN_EXPIRE_MINUTES, DUMMY_HASH, create_access_token, get_current_user, verify_password, get_password_hash, hash_identifier
 from src.schemas import LoginRequest
 
 router = APIRouter(prefix = "/accounts", tags = ['accounts'])
@@ -61,3 +61,7 @@ def login(request: Request, credentials: LoginRequest, db: Session = Depends(get
     token_expiry = dt.timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     token = create_access_token(account.id, token_expiry)
     return Token(access_token=token, token_type="bearer")
+
+@router.get("/me/has-voted", response_model=bool)
+def has_voted(request: Request, account: Account = Depends(get_current_user)):
+    return account.has_voted
