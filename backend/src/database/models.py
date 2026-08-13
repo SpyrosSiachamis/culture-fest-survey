@@ -7,20 +7,7 @@ from sqlalchemy import Enum as SAEnum
 from sqlalchemy.dialects.mysql import CHAR
 from sqlalchemy.orm import Mapped, mapped_column
 from src.database.session import Base
-
-class AudienceType(str, enum.Enum):
-    STUDENT = "student"
-    TOURIST = "tourist"
-    LOCAL = "local"
-
-class Gender(str, enum.Enum):
-    MALE = "male"
-    FEMALE = "female"
-    OTHER = "other"
-
-class AccountType(str, enum.Enum):
-    ADMIN = "admin"
-    USER = "user"
+from src.enums import AudienceType, Gender, AccountType
 
 class Account(Base):
     __tablename__ = "accounts"
@@ -49,13 +36,7 @@ class SurveyResponse(Base):
     __tablename__ = "survey_responses"
 
     id: Mapped[str] = mapped_column(CHAR(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-
-    # The type of audience the survey response is from (student, tourist, local)
-    audience_type: Mapped[AudienceType] = mapped_column(SAEnum(AudienceType), nullable=False)
-
-    # The gender of the respondent (male, female, other)
-    gender: Mapped[Gender] = mapped_column(SAEnum(Gender), nullable=False)
-
+    
     # --- Always present ---
     audience_type: Mapped[AudienceType] = mapped_column(SAEnum(AudienceType))
     gender: Mapped[Gender] = mapped_column(SAEnum(Gender))
