@@ -1,11 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import os
-from sqlalchemy import create_engine
-from src.database.session import engine
-from src.database.models import Base # noqa: F401 — import registers models on Base
+from src.database.session import Base, engine
+from src.database import models  # noqa: F401 — registers models on Base
 from src.routers import accounts
-from src.database.session import Base
+from src.routers import surveys
+
+#TODO: Drop the database when testing is done, or use a separate test database. This is just for development purposes.
+
 app = FastAPI()
 
 _allowed_origins = [
@@ -23,10 +25,12 @@ app.add_middleware(
 
 Base.metadata.create_all(bind=engine)
 
-@app.get('/')
+@app.get('/health')
 def root():
     return {
-        "message": "Hello World!"
+        "status": "ok",
+        "message": "Backend is running"
     }
 
 app.include_router(accounts.router)
+app.include_router(surveys.router)
