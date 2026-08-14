@@ -26,3 +26,6 @@ __pycache__/
 *.pyc
 .vscode/settings.json
 mysql_data/
+
+# Env templates are committed on purpose: placeholders only, never real secrets.
+!.env.example

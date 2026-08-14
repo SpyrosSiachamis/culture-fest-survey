@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime
 from typing import Optional
-from sqlalchemy import Boolean, JSON, SmallInteger, String, Text, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, JSON, SmallInteger, String, Text, func
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.dialects.mysql import CHAR
 from sqlalchemy.orm import Mapped, mapped_column
@@ -30,6 +30,53 @@ class Account(Base):
 
     # used to track the type of account
     role: Mapped[AccountType] = mapped_column(SAEnum(AccountType), default=AccountType.USER)
+
+    # Set once the account holder has proven control of the email address they signed up with.
+    # NULL means the account is still pending verification: it cannot log in and cannot vote.
+    # Only the timestamp is kept here — every piece of *temporary* verification state (the code
+    # itself, expiry, attempt counters) lives in EmailVerificationCode below.
+    email_verified_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True, default=None)
+
+
+# One row per account with a verification code in flight. The plaintext code is NEVER stored:
+# only an HMAC-SHA256 digest keyed with the server-side PEPPER (see src/verification.py). A bare
+# hash would be useless here — a 6-digit code has only 10^6 possible values, so anyone with a copy
+# of this table could brute-force it in milliseconds. The pepper lives exclusively in the
+# environment, so a database dump on its own reveals nothing.
+class EmailVerificationCode(Base):
+    __tablename__ = "email_verification_codes"
+
+    id: Mapped[str] = mapped_column(CHAR(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+
+    # unique: at most one live code per account, so issuing a new code implicitly invalidates the
+    # previous one. Cascade keeps codes from outliving the account they belong to.
+    account_id: Mapped[str] = mapped_column(
+        CHAR(36),
+        ForeignKey("accounts.id", ondelete="CASCADE"),
+        unique=True,
+        nullable=False,
+    )
+
+    code_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+
+    # Incremented on every failed verification attempt. Once it reaches the configured maximum the
+    # row is deleted, forcing the user to request a fresh code.
+    attempts: Mapped[int] = mapped_column(SmallInteger, default=0, nullable=False)
+
+    # Drives the resend cooldown — a new code cannot be sent until the cooldown has elapsed.
+    last_sent_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+
+    # Caps how many times a single pending signup can request a new code.
+    resend_count: Mapped[int] = mapped_column(SmallInteger, default=0, nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+    __table_args__ = (
+        Index("ix_email_verification_codes_expires_at", "expires_at"),
+    )
+
 
 # The survey responses do not store any account identifiers or personal information to ensure anonymity. The survey responses are linked to the survey_id and contain demographic information about the respondent, such as audience type and gender. The way anonimity is achieved is by using the has_voted field in the account model prior to the survey being taken. A 2nd mechanism being discussed is using hashed emails and passwords so if 1 of those appears in the system when a new account is made, the system rejects account creation effectively preventing multiple survey responses from the same user.
 class SurveyResponse(Base):

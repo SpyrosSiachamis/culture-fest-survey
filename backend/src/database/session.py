@@ -2,7 +2,9 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
-DATABASE_URL = (
+# DATABASE_URL, when set, wins over the individual DB_* variables. Nothing in the running stack
+# sets it — it exists so the test suite can point the app at a throwaway SQLite file.
+DATABASE_URL = os.getenv("DATABASE_URL") or (
     f"mysql+pymysql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}"
     f"@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT')}/{os.getenv('DB_NAME')}"
 )
