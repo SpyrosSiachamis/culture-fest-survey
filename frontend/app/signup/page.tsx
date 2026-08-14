@@ -1,44 +1,22 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 import { DEFAULT_RESEND_COOLDOWN_SECONDS, errorMessage, signup } from "@/lib/api";
 import { PASSWORD_MIN_LENGTH, makeValidators } from "@/lib/validation";
 import { useLang } from "@/components/LanguageProvider";
 import { format } from "@/lib/i18n";
-import { Alert, Button, FestivalShell, InlineLink, Input, Stamp } from "@/components/ui";
-import { VerifyEmailForm } from "@/components/VerifyEmailForm";
+import { SplitLayout } from "../components/SplitLayout";
+import { Field, Notice } from "../components/Field";
+import { PrimaryButton } from "../components/PrimaryButton";
+import { VerifyCodeForm } from "../components/VerifyCodeForm";
 
 type FieldErrors = {
   email?: string;
   phone?: string;
   password?: string;
 };
-
-/** Masthead block: place, wordmark, tagline and the anonymity stamp. */
-function Hero() {
-  const { t } = useLang();
-  return (
-    <div className="flex flex-col gap-4 pt-2">
-      <p className="fest-micro text-[11px] text-fest-cream/70">{t.brand.place}</p>
-      <h1 className="fest-display text-[3.25rem] leading-[0.9] text-fest-cream sm:text-6xl">
-        {t.brand.name}
-      </h1>
-      <p className="fest-micro flex flex-wrap items-center gap-x-2 text-[11px] text-fest-cream/80">
-        {t.brand.tagline.map((word, index) => (
-          <span key={word} className="flex items-center gap-2">
-            {index > 0 && <span className="text-fest-gold">*</span>}
-            {word}
-          </span>
-        ))}
-      </p>
-      <div className="flex items-center gap-4 pt-1">
-        <Stamp top={t.anon.badgeTop} value={t.anon.badgeMid} bottom={t.anon.badgeBottom} />
-        <p className="flex-1 text-sm leading-relaxed text-fest-cream/75">{t.anon.blurb}</p>
-      </div>
-    </div>
-  );
-}
 
 export default function SignupPage() {
   const { t } = useLang();
@@ -82,39 +60,38 @@ export default function SignupPage() {
 
   if (pendingEmail) {
     return (
-      <FestivalShell
-        eyebrow={verified ? t.eyebrows.done : t.eyebrows.verify}
-        title={verified ? t.verify.verifiedHeading : t.verify.heading}
-        description={verified ? undefined : t.verify.intro}
-      >
-        <VerifyEmailForm
-          initialEmail={pendingEmail}
-          initialCooldownSeconds={DEFAULT_RESEND_COOLDOWN_SECONDS}
-          onVerified={() => setVerified(true)}
-        />
-      </FestivalShell>
+      <SplitLayout>
+        <p className="ticker text-[10px] text-gold">
+          {verified ? t.eyebrows.done : t.eyebrows.verify}
+        </p>
+        <h2 className="display mt-3 text-4xl text-bone">
+          {verified ? t.verify.verifiedHeading : t.verify.heading}
+        </h2>
+        {!verified && <p className="mt-3 text-sm text-bone/65">{t.verify.intro}</p>}
+
+        <div className="mt-8">
+          <VerifyCodeForm
+            initialEmail={pendingEmail}
+            initialCooldownSeconds={DEFAULT_RESEND_COOLDOWN_SECONDS}
+            onVerified={() => setVerified(true)}
+          />
+        </div>
+      </SplitLayout>
     );
   }
 
   return (
-    <FestivalShell
-      hero={<Hero />}
-      eyebrow={t.eyebrows.signup}
-      title={t.signup.heading}
-      description={t.signup.intro}
-      footer={
-        <p className="text-center text-sm text-fest-cream/70">
-          {t.signup.haveAccount}{" "}
-          <InlineLink href="/verify">{t.signup.haveAccountLink}</InlineLink>
-        </p>
-      }
-    >
-      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-6">
-        {formError && <Alert tone="error">{formError}</Alert>}
+    <SplitLayout>
+      <p className="ticker text-[10px] text-gold">{t.eyebrows.signup}</p>
+      <h2 className="display mt-3 text-4xl text-bone">{t.signup.heading}</h2>
+      <p className="mt-3 text-sm text-bone/65">{t.signup.intro}</p>
 
-        <Input
+      <form onSubmit={handleSubmit} noValidate className="mt-8 flex flex-col gap-6">
+        {formError && <Notice tone="error">{formError}</Notice>}
+
+        <Field
+          id="email"
           label={t.signup.email}
-          name="email"
           type="email"
           inputMode="email"
           autoComplete="email"
@@ -125,9 +102,9 @@ export default function SignupPage() {
           onChange={(event) => setEmail(event.target.value)}
         />
 
-        <Input
+        <Field
+          id="phone"
           label={t.signup.phone}
-          name="phone"
           type="tel"
           inputMode="tel"
           autoComplete="tel"
@@ -138,9 +115,9 @@ export default function SignupPage() {
           onChange={(event) => setPhone(event.target.value)}
         />
 
-        <Input
+        <Field
+          id="password"
           label={t.signup.password}
-          name="password"
           type="password"
           autoComplete="new-password"
           value={password}
@@ -151,12 +128,19 @@ export default function SignupPage() {
         />
 
         <div className="flex flex-col gap-4">
-          <Button type="submit" loading={submitting}>
+          <PrimaryButton type="submit" disabled={submitting}>
             {submitting ? t.signup.submitting : t.signup.submit}
-          </Button>
-          <p className="text-sm leading-relaxed text-fest-cream/50">{t.signup.privacy}</p>
+          </PrimaryButton>
+          <p className="text-xs leading-relaxed text-bone/45">{t.signup.privacy}</p>
         </div>
       </form>
-    </FestivalShell>
+
+      <p className="mt-6 text-sm text-bone/60">
+        {t.signup.haveAccount}{" "}
+        <Link href="/verify" className="font-semibold text-gold underline">
+          {t.signup.haveAccountLink}
+        </Link>
+      </p>
+    </SplitLayout>
   );
 }

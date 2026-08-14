@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { errorMessage, isApiError, submitSurvey } from "@/lib/api";
@@ -13,22 +14,29 @@ import {
   type Question,
 } from "@/lib/survey";
 import { useLang } from "@/components/LanguageProvider";
-import { format, questionCopy, type Dictionary } from "@/lib/i18n";
-import {
-  Alert,
-  Button,
-  ChipGroup,
-  FestivalShell,
-  InlineLink,
-  OptionCard,
-  ProgressHeader,
-  ScaleGrid,
-  Stamp,
-  TextAction,
-  TextArea,
-} from "@/components/ui";
+import { questionCopy, type Dictionary } from "@/lib/i18n";
+import { ChoiceCard } from "../components/ChoiceCard";
+import { ChipGroup } from "../components/ChipGroup";
+import { Notice } from "../components/Field";
+import { GlassCard } from "../components/GlassCard";
+import { LocaleToggle } from "../components/LocaleToggle";
+import { PrimaryButton, GhostButton } from "../components/PrimaryButton";
+import { ProgressBar } from "../components/ProgressBar";
+import { ScaleGrid } from "../components/ScaleGrid";
+import { StampBadge } from "../components/StampBadge";
+import { TextArea } from "../components/TextArea";
 
 const LETTERS = "ABCDEFGHI";
+
+/** Full-bleed gradient behind every survey screen. */
+function Shell({ children }: { children: React.ReactNode }) {
+  return (
+    <main className="fest-gradient fest-grain relative min-h-dvh">
+      <div className="pointer-events-none absolute inset-0 bg-ink/45" />
+      <div className="relative z-10">{children}</div>
+    </main>
+  );
+}
 
 /**
  * Survey wizard — one question per screen, with branch questions filtered in or out by the
@@ -62,7 +70,6 @@ export default function SurveyPage() {
   // Denominator stays at the full count until the audience narrows the path, so the counter never
   // appears to jump backwards mid-run.
   const total = audience ? questions.length : TOTAL_QUESTIONS;
-  const percent = Math.round(((index + 1) / total) * 100);
 
   function setAnswer(value: Answers[keyof Answers]) {
     setAnswers((current) => ({ ...current, [question.id]: value }));
@@ -104,85 +111,101 @@ export default function SurveyPage() {
   // and only then discover they are signed out.
   if (!getAccessToken() && !submitted) {
     return (
-      <FestivalShell eyebrow={t.eyebrows.login} title={t.gate.heading} description={t.gate.body}>
-        <div className="flex flex-col gap-3">
-          <InlineLink href="/login">
-            <Button type="button">{t.common.signIn}</Button>
-          </InlineLink>
-          <InlineLink href="/signup">
-            <Button type="button" variant="secondary">
-              {t.gate.createAccount}
-            </Button>
-          </InlineLink>
+      <Shell>
+        <div className="mx-auto flex min-h-dvh w-full max-w-lg items-center px-5 py-10">
+          <GlassCard className="w-full">
+            <p className="ticker text-[10px] text-gold">{t.eyebrows.login}</p>
+            <h2 className="display mt-3 text-4xl text-bone">{t.gate.heading}</h2>
+            <p className="mt-3 text-sm text-bone/70">{t.gate.body}</p>
+            <div className="mt-8 flex flex-col gap-3">
+              <Link href="/">
+                <PrimaryButton type="button">{t.common.signIn}</PrimaryButton>
+              </Link>
+              <Link href="/signup" className="text-center">
+                <GhostButton type="button" className="w-full">
+                  {t.gate.createAccount}
+                </GhostButton>
+              </Link>
+            </div>
+          </GlassCard>
         </div>
-      </FestivalShell>
+      </Shell>
     );
   }
 
   if (submitted) {
     return (
-      <FestivalShell eyebrow={t.eyebrows.done} title={t.done.heading} description={t.done.body}>
-        <div className="flex flex-col items-center gap-5">
-          <Stamp
-            top={t.anon.badgeTop}
-            value={t.anon.badgeMid}
-            bottom={t.anon.badgeBottom}
-            size="lg"
-            tone="gold"
-          />
-          <Alert tone="success">{t.done.confirmation}</Alert>
+      <Shell>
+        <div className="mx-auto flex min-h-dvh w-full max-w-lg items-center px-5 py-10">
+          <GlassCard className="w-full">
+            <div className="flex flex-col items-center gap-5 text-center">
+              <StampBadge
+                top={t.anon.badgeTop}
+                main={t.anon.badgeMid}
+                bottom={t.anon.badgeBottom}
+                tone="gold"
+              />
+              <div>
+                <h2 className="display text-4xl text-bone">{t.done.heading}</h2>
+                <p className="mt-3 text-sm text-bone/70">{t.done.body}</p>
+              </div>
+              <Notice tone="success">{t.done.confirmation}</Notice>
+            </div>
+          </GlassCard>
         </div>
-      </FestivalShell>
+      </Shell>
     );
   }
 
   return (
-    <FestivalShell
-      progress={
-        <ProgressHeader
-          stampTop={t.common.step}
-          stampValue={format(t.common.stepOf, {
-            current: String(index + 1).padStart(2, "0"),
-            total,
-          })}
-          stampBottom={t.common.anonymous}
-          percent={percent}
-          caption={`${format(t.common.percentComplete, { percent })} — ${t.common.noAnswerLinked}`}
-        />
-      }
-      eyebrow={copy.eyebrow}
-      title={copy.title}
-      description={copy.description}
-      footer={
-        index > 0 ? (
-          <TextAction arrow onClick={() => setIndex((current) => current - 1)}>
-            {t.common.back}
-          </TextAction>
-        ) : undefined
-      }
-    >
-      {error && <Alert tone="error">{error}</Alert>}
-      {copy.warning && <Alert tone="warning">{copy.warning}</Alert>}
-      {copy.note && <Alert tone="info">{copy.note}</Alert>}
+    <Shell>
+      <div className="mx-auto flex min-h-dvh w-full max-w-lg flex-col px-5 pt-6 pb-8">
+        <LocaleToggle className="mb-6 self-end border-white/30 text-white" />
 
-      <QuestionBody
-        question={question}
-        answers={answers}
-        t={t}
-        onSet={setAnswer}
-        onToggleMulti={toggleMulti}
-      />
+        <ProgressBar step={index + 1} total={total} />
 
-      <div className="flex flex-col gap-2">
-        <Button type="button" disabled={!canAdvance} loading={submitting} onClick={handleNext}>
-          {isLast ? (submitting ? t.common.sending : t.common.submit) : t.common.next}
-        </Button>
+        <GlassCard className="mt-6">
+          <p className="ticker text-[10px] text-gold">{copy.eyebrow}</p>
+          <h2 className="display mt-3 text-[clamp(1.75rem,7vw,2.5rem)] text-bone">{copy.title}</h2>
+          {copy.description && <p className="mt-3 text-sm text-bone/60">{copy.description}</p>}
 
-        {question.optional && !answered && (
-          <TextAction onClick={handleNext}>{t.common.skip}</TextAction>
-        )}
+          <div className="mt-5 flex flex-col gap-3">
+            {error && <Notice tone="error">{error}</Notice>}
+            {copy.warning && <Notice tone="warning">{copy.warning}</Notice>}
+            {copy.note && <Notice tone="info">{copy.note}</Notice>}
+          </div>
+
+          <div className="mt-7">
+            <QuestionBody
+              question={question}
+              answers={answers}
+              t={t}
+              onSet={setAnswer}
+              onToggleMulti={toggleMulti}
+            />
+          </div>
+        </GlassCard>
+
+        <div className="mt-auto pt-8">
+          <PrimaryButton type="button" disabled={!canAdvance || submitting} onClick={handleNext}>
+            {isLast ? (submitting ? t.common.sending : t.common.submit) : t.common.next}
+          </PrimaryButton>
+
+          <div className="mt-2 flex justify-center gap-4">
+            {index > 0 && (
+              <GhostButton type="button" onClick={() => setIndex((current) => current - 1)}>
+                &larr; {t.common.back}
+              </GhostButton>
+            )}
+            {question.optional && !answered && (
+              <GhostButton type="button" onClick={handleNext}>
+                {t.common.skip}
+              </GhostButton>
+            )}
+          </div>
+        </div>
       </div>
-    </FestivalShell>
+    </Shell>
   );
 }
 
@@ -209,11 +232,11 @@ function QuestionBody({
           {question.values.map((optionValue, position) => {
             const option = copy.options?.[optionValue];
             return (
-              <OptionCard
+              <ChoiceCard
                 key={optionValue}
-                letter={LETTERS[position]}
+                marker={LETTERS[position]}
                 label={option?.label ?? optionValue}
-                description={option?.description}
+                hint={option?.description}
                 selected={value === optionValue}
                 onSelect={() => onSet(optionValue)}
               />
@@ -225,14 +248,14 @@ function QuestionBody({
     case "bool":
       return (
         <div className="flex flex-col gap-3">
-          <OptionCard
-            letter="A"
+          <ChoiceCard
+            marker="A"
             label={copy.options?.yes.label ?? "Yes"}
             selected={value === true}
             onSelect={() => onSet(true)}
           />
-          <OptionCard
-            letter="B"
+          <ChoiceCard
+            marker="B"
             label={copy.options?.no.label ?? "No"}
             selected={value === false}
             onSelect={() => onSet(false)}

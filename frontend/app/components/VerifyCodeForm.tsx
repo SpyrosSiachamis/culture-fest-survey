@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 import {
@@ -14,7 +15,8 @@ import { CODE_LENGTH, makeValidators } from "@/lib/validation";
 import { useCooldown } from "@/hooks/useCooldown";
 import { useLang } from "@/components/LanguageProvider";
 import { format } from "@/lib/i18n";
-import { Alert, Button, InlineLink, Input } from "@/components/ui";
+import { Field, Notice } from "./Field";
+import { PrimaryButton, GhostButton } from "./PrimaryButton";
 
 type Props = {
   /** Carried over from signup so the user does not have to retype it. */
@@ -28,16 +30,25 @@ type Props = {
 };
 
 /** How each reportable state is rendered. Anything unlisted is treated as an error. */
-const STATUS_TONE: Record<string, "error" | "success" | "info"> = {
+const STATUS_TONE: Record<string, "error" | "success" | "info" | "warning"> = {
   verified: "success",
   already_verified: "info",
   resent: "info",
+  expired: "warning",
+  too_many_attempts: "warning",
 };
 
 /** Server statuses, plus the local-only "resent" notice. */
 type ResultStatus = VerificationStatus | "error" | "resent";
 
-export function VerifyEmailForm({
+/**
+ * Six-digit code entry with resend.
+ *
+ * Every rule that matters — code correctness, expiry, single use, attempt ceiling and the resend
+ * cooldown — is enforced server-side. Nothing here is a security control; the countdown and the
+ * disabled states exist so the screen tells the truth about what the server will accept.
+ */
+export function VerifyCodeForm({
   initialEmail = "",
   emailEditable = false,
   initialCooldownSeconds = 0,
@@ -127,23 +138,23 @@ export function VerifyEmailForm({
   if (verified) {
     return (
       <div className="flex flex-col gap-5">
-        <Alert tone="success">{result?.message}</Alert>
-        <p className="text-base leading-relaxed text-fest-cream/70">{t.verify.verifiedBody}</p>
-        <InlineLink href="/login">
-          <Button type="button">{t.common.signIn}</Button>
-        </InlineLink>
+        <Notice tone="success">{result?.message}</Notice>
+        <p className="text-sm leading-relaxed text-bone/70">{t.verify.verifiedBody}</p>
+        <Link href="/" className="block">
+          <PrimaryButton type="button">{t.common.signIn}</PrimaryButton>
+        </Link>
       </div>
     );
   }
 
   return (
     <form onSubmit={handleVerify} noValidate className="flex flex-col gap-6">
-      {result && <Alert tone={STATUS_TONE[result.status] ?? "error"}>{result.message}</Alert>}
+      {result && <Notice tone={STATUS_TONE[result.status] ?? "error"}>{result.message}</Notice>}
 
       {emailEditable ? (
-        <Input
+        <Field
+          id="email"
           label={t.verify.editEmail}
-          name="email"
           type="email"
           inputMode="email"
           autoComplete="email"
@@ -154,14 +165,14 @@ export function VerifyEmailForm({
           onChange={(event) => setEmail(event.target.value)}
         />
       ) : (
-        <p className="text-base leading-relaxed text-fest-cream/70">
-          {t.verify.sentTo} <span className="font-semibold text-fest-gold">{email}</span>
+        <p className="text-sm leading-relaxed text-bone/70">
+          {t.verify.sentTo} <span className="font-semibold text-gold">{email}</span>
         </p>
       )}
 
-      <Input
+      <Field
+        id="code"
         label={t.verify.codeLabel}
-        name="code"
         type="text"
         inputMode="numeric"
         autoComplete="one-time-code"
@@ -170,28 +181,22 @@ export function VerifyEmailForm({
         value={code}
         error={fieldErrors.code}
         disabled={submitting}
-        className="h-20 text-center font-mono text-4xl tracking-[0.3em]"
+        className="display h-16 text-center text-4xl tracking-[0.35em]"
         onChange={(event) => setCode(event.target.value.replace(/\D/g, ""))}
       />
 
       <div className="flex flex-col gap-3">
-        <Button type="submit" loading={submitting} disabled={needsNewCode}>
+        <PrimaryButton type="submit" disabled={submitting || needsNewCode}>
           {submitting ? t.verify.verifying : t.verify.verify}
-        </Button>
+        </PrimaryButton>
 
-        <Button
-          type="button"
-          variant="secondary"
-          loading={resending}
-          disabled={cooldown.isCoolingDown}
-          onClick={handleResend}
-        >
-          {cooldown.isCoolingDown ? format(t.verify.resendIn, { seconds: cooldown.secondsLeft }) : t.verify.resend}
-        </Button>
+        <GhostButton type="button" disabled={resending || cooldown.isCoolingDown} onClick={handleResend}>
+          {cooldown.isCoolingDown
+            ? format(t.verify.resendIn, { seconds: cooldown.secondsLeft })
+            : t.verify.resend}
+        </GhostButton>
 
-        <p className="text-center text-sm leading-relaxed text-fest-cream/50">
-          {t.verify.footnote}
-        </p>
+        <p className="text-center text-xs leading-relaxed text-bone/45">{t.verify.footnote}</p>
       </div>
     </form>
   );

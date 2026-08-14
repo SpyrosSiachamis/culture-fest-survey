@@ -10,7 +10,12 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --font-display: var(--font-archivo-black);
+  /* Archivo Black carries Latin; Noto Sans Display carries Greek, because Archivo ships no Greek
+     glyphs. Named literally rather than through next/font's --font-* variables: those expand to
+     `"Archivo Black", "Archivo Black Fallback"`, and that fallback face is local(Arial) — which
+     *does* have Greek and would swallow every Greek glyph before Noto got a turn. */
+  --font-display: "Archivo Black", "Noto Sans Display", "Arial Black", system-ui, sans-serif;
+  --font-body: "Archivo", "Noto Sans Display", system-ui, sans-serif;
 
   /* Festival palette, read off the poster: violet at the top of the sheet running down through
      magenta and hot pink into orange and gold. Used by the .fest-* surfaces below. */
@@ -24,6 +29,14 @@
   /* Warm off-white. Pure #fff reads cold and clinical against this much saturation. */
   --color-fest-cream: #f5efe6;
   --color-fest-panel: #1b0d22;
+
+  /* Aliases used by the split-screen account surfaces below. Same palette, shorter names. */
+  --color-gold: #ffc21a;
+  --color-ink: #14031f;
+  --color-bone: #f5efe6;
+  --color-magenta: #d6249f;
+  --color-orange: #ff7a18;
+  --color-violet: #6d28d9;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -130,3 +143,97 @@ body {
 }
 
 
+
+/* ---------------------------------------------------------------------------------------------
+   Split-screen account surfaces
+   ---------------------------------------------------------------------------------------------
+   The diagonal 50/50 treatment used by the sign-in, sign-up, verify and survey screens. Always
+   dark-on-bright regardless of system theme, like .fest-surface above.
+   --------------------------------------------------------------------------------------------- */
+
+.fest-gradient {
+  background:
+    radial-gradient(120% 80% at 15% 0%, #7c3aed 0%, transparent 55%),
+    radial-gradient(110% 70% at 90% 15%, #ff2d9b 0%, transparent 60%),
+    linear-gradient(160deg, #5b21b6 0%, #d6249f 38%, #ff7a18 72%, #ffc21a 100%);
+}
+
+/* Fine tooth of noise so the large flat gradient reads as printed stock rather than a CSS fill. */
+.fest-grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.16;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+}
+
+/* The seam. Stacked on phones with a diagonal cut along the bottom of the artwork; a true
+   diagonal 50/50 once there is width for two columns. */
+.split-brand { clip-path: polygon(0 0, 100% 0, 100% 88%, 0 100%); }
+.split-form { clip-path: none; }
+
+@media (min-width: 1024px) {
+  .split-brand { clip-path: polygon(0 0, 58% 0, 42% 100%, 0 100%); }
+  .split-form { clip-path: polygon(58% 0, 100% 0, 100% 100%, 42% 100%); }
+}
+
+/* Chamfer at panel scale. The -sm/-xs sizes already exist above. */
+.notch { clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 22px 100%, 0 calc(100% - 22px)); }
+
+/* Card interior for the split screens: translucent so the gradient still reads behind it. */
+.glass {
+  background: rgba(13, 6, 22, 0.72);
+  backdrop-filter: blur(14px);
+}
+
+/* --- Type ----------------------------------------------------------------------------------- */
+
+/* Wordmark only: Archivo's variable width axis pushed wide, the way poster mastheads are set. */
+.wordmark {
+  font-family: var(--font-body);
+  font-weight: 900;
+  font-stretch: 125%;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+  line-height: 0.84;
+}
+
+/* weight 900 drives Noto's black cut for Greek. Archivo Black is a single 400-weight face, so
+   font-synthesis-weight:none stops the browser faux-bolding a face that is already black. */
+.display {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-synthesis-weight: none;
+  text-transform: uppercase;
+  letter-spacing: -0.015em;
+  line-height: 0.94;
+  text-wrap: balance;
+}
+
+.ticker {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-synthesis-weight: none;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+}
+
+/* Underlined field rather than a boxed input — closer to a form printed on the poster.
+   16px minimum stops iOS Safari zooming the viewport on focus. */
+.fest-input {
+  width: 100%;
+  min-height: 3rem;
+  padding: 0.5rem 0.25rem;
+  font-size: 1rem;
+  color: var(--color-bone);
+  background: transparent;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-bone) 30%, transparent);
+  outline: none;
+  transition: border-color 150ms ease;
+}
+
+.fest-input::placeholder { color: color-mix(in srgb, var(--color-bone) 35%, transparent); }
+.fest-input:focus { border-bottom-color: var(--color-gold); }
+.fest-input:disabled { opacity: 0.5; }
