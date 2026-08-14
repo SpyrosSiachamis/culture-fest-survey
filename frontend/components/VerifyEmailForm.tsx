@@ -21,6 +21,8 @@ type Props = {
   emailEditable?: boolean;
   /** Seconds remaining before a resend is allowed, when arriving straight from signup. */
   initialCooldownSeconds?: number;
+  /** Fired once the address is confirmed, so the surrounding screen can retitle itself. */
+  onVerified?: () => void;
 };
 
 /** How each reportable state is rendered. Anything unlisted is treated as an error. */
@@ -37,6 +39,7 @@ export function VerifyEmailForm({
   initialEmail = "",
   emailEditable = false,
   initialCooldownSeconds = 0,
+  onVerified,
 }: Props) {
   const [email, setEmail] = useState(initialEmail);
   const [code, setCode] = useState("");
@@ -73,6 +76,7 @@ export function VerifyEmailForm({
     try {
       const response = await verifyEmail(email.trim(), code);
       setResult({ status: "verified", message: response.message });
+      onVerified?.();
     } catch (error) {
       setResult({
         status: isApiError(error) ? error.status : "error",
@@ -117,11 +121,15 @@ export function VerifyEmailForm({
 
   if (verified) {
     return (
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-5">
         <Alert tone="success">{result?.message}</Alert>
-        <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-          Your email address is confirmed. You can now sign in and take the survey.
+        <p className="text-base leading-relaxed text-white/80">
+          Your address is confirmed and your account is active. Sign in and the survey is all
+          yours.
         </p>
+        <a href="/login" className="contents">
+          <Button type="button">Sign in</Button>
+        </a>
       </div>
     );
   }
@@ -139,15 +147,16 @@ export function VerifyEmailForm({
           type="email"
           inputMode="email"
           autoComplete="email"
+          placeholder="you@example.com"
           value={email}
           error={fieldErrors.email}
           disabled={submitting}
           onChange={(event) => setEmail(event.target.value)}
         />
       ) : (
-        <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-          We sent a {CODE_LENGTH}-digit code to{" "}
-          <span className="font-medium text-zinc-900 dark:text-zinc-100">{email}</span>.
+        <p className="text-base leading-relaxed text-white/80">
+          Code sent to{" "}
+          <span className="font-semibold text-fest-gold">{email}</span>
         </p>
       )}
 
@@ -162,15 +171,15 @@ export function VerifyEmailForm({
         value={code}
         error={fieldErrors.code}
         disabled={submitting}
-        className="text-center font-mono text-2xl tracking-[0.4em]"
+        className="h-20 text-center font-mono text-4xl tracking-[0.32em] sm:tracking-[0.4em]"
         onChange={(event) => setCode(event.target.value.replace(/\D/g, ""))}
       />
 
       <Button type="submit" loading={submitting} disabled={needsNewCode}>
-        {submitting ? "Verifying…" : "Verify email"}
+        {submitting ? "Verifying" : "Verify email"}
       </Button>
 
-      <div className="flex flex-col items-center gap-2">
+      <div className="flex flex-col items-center gap-3 border-t border-white/15 pt-5">
         <Button
           type="button"
           variant="secondary"
@@ -179,12 +188,11 @@ export function VerifyEmailForm({
           onClick={handleResend}
         >
           {cooldown.isCoolingDown
-            ? `Resend code in ${cooldown.secondsLeft}s`
+            ? `Resend in ${cooldown.secondsLeft}s`
             : "Send a new code"}
         </Button>
-        <p className="text-center text-xs leading-relaxed text-zinc-500 dark:text-zinc-500">
-          Codes expire after 15 minutes and can only be used once. Check your spam folder if the
-          email has not arrived.
+        <p className="text-center text-sm leading-relaxed text-white/70">
+          Codes last 15 minutes and work once. Check your spam folder if nothing lands.
         </p>
       </div>
     </form>

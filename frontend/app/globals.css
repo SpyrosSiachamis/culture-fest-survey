@@ -10,6 +10,17 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-anton);
+
+  /* Festival palette, read off the poster: violet at the top of the sheet running down through
+     magenta and hot pink into orange and gold. Used by the .fest-* surfaces below. */
+  --color-fest-violet: #4c1d95;
+  --color-fest-purple: #7c3aed;
+  --color-fest-magenta: #d6249f;
+  --color-fest-pink: #ff3d6e;
+  --color-fest-orange: #ff7a18;
+  --color-fest-gold: #ffc21a;
+  --color-fest-ink: #14031f;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -23,4 +34,78 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* ---------------------------------------------------------------------------------------------
+   Festival surfaces
+   ---------------------------------------------------------------------------------------------
+   Used by the account and survey screens. These deliberately ignore the light/dark tokens above:
+   the artwork is always a dark, saturated gradient, so the screens are always dark-on-bright
+   regardless of the visitor's system theme. The marketing home page is untouched by any of this.
+   --------------------------------------------------------------------------------------------- */
+
+.fest-surface {
+  position: relative;
+  isolation: isolate;
+  color: #ffffff;
+  background:
+    radial-gradient(115% 70% at 50% 0%, rgba(124, 58, 237, 0.95) 0%, rgba(124, 58, 237, 0) 62%),
+    radial-gradient(95% 55% at 50% 42%, rgba(214, 36, 159, 0.9) 0%, rgba(214, 36, 159, 0) 68%),
+    linear-gradient(
+      180deg,
+      #3b0f7a 0%,
+      #8b1cc4 26%,
+      #d6249f 48%,
+      #ff3d6e 66%,
+      #ff7a18 84%,
+      #ffc21a 100%
+    );
+  background-attachment: fixed;
+}
+
+/* Faint starfield over the top third, echoing the poster's night-sky band. Purely decorative. */
+.fest-surface::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 55% 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    radial-gradient(1.5px 1.5px at 12% 18%, rgba(255, 255, 255, 0.75), transparent),
+    radial-gradient(1.5px 1.5px at 78% 12%, rgba(255, 255, 255, 0.6), transparent),
+    radial-gradient(1px 1px at 34% 34%, rgba(255, 255, 255, 0.55), transparent),
+    radial-gradient(1px 1px at 62% 26%, rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(1.5px 1.5px at 88% 40%, rgba(255, 255, 255, 0.45), transparent),
+    radial-gradient(1px 1px at 22% 48%, rgba(255, 255, 255, 0.4), transparent);
+}
+
+/* Smoked-glass card holding the actual content, so text stays legible over the gradient. */
+.fest-panel {
+  background: rgba(16, 4, 28, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow:
+    0 24px 60px -24px rgba(0, 0, 0, 0.75),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+}
+
+/* Circular stamp, the poster's "16TH ANNUAL" / "FREE" device. Used for step and status callouts. */
+.fest-stamp {
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.18);
+}
+
+/* Display type: heavy condensed caps, tightened up the way poster headlines are set. */
+.fest-display {
+  font-family: var(--font-display), "Arial Narrow", Impact, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  line-height: 0.92;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fest-surface {
+    background-attachment: scroll;
+  }
 }

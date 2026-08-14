@@ -9,7 +9,7 @@ import {
   validatePassword,
   validatePhone,
 } from "@/lib/validation";
-import { Alert, Button, FormShell, Input } from "@/components/ui";
+import { Alert, Button, FestivalShell, Input, Stamp } from "@/components/ui";
 import { VerifyEmailForm } from "@/components/VerifyEmailForm";
 
 type FieldErrors = {
@@ -28,6 +28,7 @@ export default function SignupPage() {
   // Set once signup has been accepted; switches this page over to the code step. The address is
   // held here rather than in the URL so it is not left behind in history or referrer headers.
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
+  const [verified, setVerified] = useState(false);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -56,22 +57,41 @@ export default function SignupPage() {
 
   if (pendingEmail) {
     return (
-      <FormShell
-        title="Check your email"
-        description="Enter the code we just sent to confirm your address and activate your account."
+      <FestivalShell
+        title={verified ? "You're in" : "Check your email"}
+        description={
+          verified ? undefined : "Punch in the code we just sent and your account is live."
+        }
+        stamp={
+          verified ? (
+            <Stamp top="Status" value="OK" bottom="verified" tone="gold" />
+          ) : (
+            <Stamp top="Step" value="2" bottom="of 2" tone="gold" />
+          )
+        }
       >
         <VerifyEmailForm
           initialEmail={pendingEmail}
           initialCooldownSeconds={DEFAULT_RESEND_COOLDOWN_SECONDS}
+          onVerified={() => setVerified(true)}
         />
-      </FormShell>
+      </FestivalShell>
     );
   }
 
   return (
-    <FormShell
-      title="Create your account"
-      description="You will need to confirm your email address before you can take the survey."
+    <FestivalShell
+      title="Join the lineup"
+      description="Create an account, confirm your email, then tell us how this festival should go down."
+      stamp={<Stamp top="Step" value="1" bottom="of 2" />}
+      footer={
+        <p className="text-center text-sm text-white/70">
+          Already signed up?{" "}
+          <a href="/verify" className="font-semibold text-fest-gold underline underline-offset-4">
+            Enter your code
+          </a>
+        </p>
+      }
     >
       <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
         {formError && <Alert tone="error">{formError}</Alert>}
@@ -114,14 +134,15 @@ export default function SignupPage() {
         />
 
         <Button type="submit" loading={submitting}>
-          {submitting ? "Creating account…" : "Create account"}
+          {submitting ? "Creating" : "Create account"}
         </Button>
 
-        <p className="text-xs leading-relaxed text-zinc-500 dark:text-zinc-500">
-          Your email and phone number are only ever stored as one-way hashes, so responses stay
-          anonymous. They are used to make sure each person answers the survey once.
+        <p className="text-sm leading-relaxed text-white/70">
+          Your email and phone are only ever stored as one-way hashes — they cannot be read back.
+          They exist purely so each person answers once. Your survey answers are never linked to
+          them.
         </p>
       </form>
-    </FormShell>
+    </FestivalShell>
   );
 }

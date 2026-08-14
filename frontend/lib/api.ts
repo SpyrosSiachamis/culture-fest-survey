@@ -5,16 +5,16 @@
  * every security decision — nothing on this side of the wire is trusted.
  */
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000";
 
-/** Machine-readable states the verification endpoints can report back. */
+/** Machine-readable states the account endpoints can report back. */
 export type VerificationStatus =
   | "verified"
   | "invalid"
   | "expired"
   | "too_many_attempts"
   | "already_verified"
+  | "email_not_verified"
   | "rate_limited"
   | "network_error";
 
@@ -116,8 +116,22 @@ async function post<T>(path: string, payload: unknown): Promise<T> {
   return body as T;
 }
 
+export type LoginInput = {
+  email: string;
+  password: string;
+};
+
+export type TokenResponse = {
+  access_token: string;
+  token_type: string;
+};
+
 export function signup(input: SignupInput) {
   return post<SignupAccepted>("/accounts/signup", input);
+}
+
+export function login(input: LoginInput) {
+  return post<TokenResponse>("/accounts/login", input);
 }
 
 export function verifyEmail(email: string, code: string) {
