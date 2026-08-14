@@ -1,162 +1,99 @@
 "use client";
 
 import { useState } from "react";
-
-import { DEFAULT_RESEND_COOLDOWN_SECONDS, errorMessage, signup } from "@/lib/api";
-import { PASSWORD_MIN_LENGTH, makeValidators } from "@/lib/validation";
-import { useLang } from "@/components/LanguageProvider";
-import { format } from "@/lib/i18n";
-import { Alert, Button, FestivalShell, InlineLink, Input, Stamp } from "@/components/ui";
-import { VerifyEmailForm } from "@/components/VerifyEmailForm";
-
-type FieldErrors = {
-  email?: string;
-  phone?: string;
-  password?: string;
-};
-
-/** Masthead block: place, wordmark, tagline and the anonymity stamp. */
-function Hero() {
-  const { t } = useLang();
-  return (
-    <div className="flex flex-col gap-4 pt-2">
-      <p className="fest-micro text-[11px] text-fest-cream/70">{t.brand.place}</p>
-      <h1 className="fest-display text-[3.25rem] leading-[0.9] text-fest-cream sm:text-6xl">
-        {t.brand.name}
-      </h1>
-      <p className="fest-micro flex flex-wrap items-center gap-x-2 text-[11px] text-fest-cream/80">
-        {t.brand.tagline.map((word, index) => (
-          <span key={word} className="flex items-center gap-2">
-            {index > 0 && <span className="text-fest-gold">*</span>}
-            {word}
-          </span>
-        ))}
-      </p>
-      <div className="flex items-center gap-4 pt-1">
-        <Stamp top={t.anon.badgeTop} value={t.anon.badgeMid} bottom={t.anon.badgeBottom} />
-        <p className="flex-1 text-sm leading-relaxed text-fest-cream/75">{t.anon.blurb}</p>
-      </div>
-    </div>
-  );
-}
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { SplitLayout } from "@/app/components/SplitLayout";
+import { PrimaryButton } from "@/app/components/PrimaryButton";
+import { Field, FormError } from "@/app/components/Field";
+import * as api from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
+import { useI18n } from "@/lib/i18n";
 
 export default function SignupPage() {
-  const { t } = useLang();
-  const v = makeValidators(t);
-
+  const router = useRouter();
+  const { setToken } = useAuth();
+  const { t } = useI18n();
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
-  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-  const [formError, setFormError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  // Set once signup has been accepted; switches this page over to the code step. The address is
-  // held here rather than in the URL so it is not left behind in history or referrer headers.
-  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
-  const [verified, setVerified] = useState(false);
+  const [errorCode, setErrorCode] = useState<api.ErrorCode | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  async function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
-    if (submitting) return;
+  const ready =
+    email.trim() !== "" && phone.trim() !== "" && password.length >= 8;
 
-    const errors: FieldErrors = {
-      email: v.email(email) ?? undefined,
-      phone: v.phone(phone) ?? undefined,
-      password: v.password(password) ?? undefined,
-    };
-    setFieldErrors(errors);
-    if (errors.email || errors.phone || errors.password) return;
-
-    setSubmitting(true);
-    setFormError(null);
-
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!ready || busy) return;
+    setBusy(true);
+    setErrorCode(null);
     try {
-      await signup({ email: email.trim(), phone: phone.trim(), password });
-      setPendingEmail(email.trim());
-    } catch (error) {
-      setFormError(errorMessage(error));
-    } finally {
-      setSubmitting(false);
+      await api.signup({ email: email.trim(), phone: phone.trim(), password });
+      // Sign straight in so the respondent never sees a second form.
+      const token = await api.login({ email: email.trim(), password });
+      setToken(token);
+      router.push("/survey");
+    } catch (err) {
+      setErrorCode(err instanceof api.ApiError ? err.code : "generic");
+      setBusy(false);
     }
   }
 
-  if (pendingEmail) {
-    return (
-      <FestivalShell
-        eyebrow={verified ? t.eyebrows.done : t.eyebrows.verify}
-        title={verified ? t.verify.verifiedHeading : t.verify.heading}
-        description={verified ? undefined : t.verify.intro}
-      >
-        <VerifyEmailForm
-          initialEmail={pendingEmail}
-          initialCooldownSeconds={DEFAULT_RESEND_COOLDOWN_SECONDS}
-          onVerified={() => setVerified(true)}
-        />
-      </FestivalShell>
-    );
-  }
-
   return (
-    <FestivalShell
-      hero={<Hero />}
-      eyebrow={t.eyebrows.signup}
-      title={t.signup.heading}
-      description={t.signup.intro}
-      footer={
-        <p className="text-center text-sm text-fest-cream/70">
-          {t.signup.haveAccount}{" "}
-          <InlineLink href="/verify">{t.signup.haveAccountLink}</InlineLink>
-        </p>
-      }
-    >
-      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-6">
-        {formError && <Alert tone="error">{formError}</Alert>}
+    <SplitLayout>
+      <h2 className="display text-4xl text-bone">{t("signup.title")}</h2>
+      <p className="mt-3 text-sm text-bone/65">{t("signup.intro")}</p>
 
-        <Input
-          label={t.signup.email}
-          name="email"
+      <form onSubmit={onSubmit} className="mt-8 flex flex-col gap-6">
+        <Field
+          id="email"
+          label={t("signup.email")}
           type="email"
           inputMode="email"
           autoComplete="email"
-          placeholder={t.signup.emailPlaceholder}
+          placeholder={t("signup.emailPlaceholder")}
+          required
           value={email}
-          error={fieldErrors.email}
-          disabled={submitting}
-          onChange={(event) => setEmail(event.target.value)}
+          onChange={(e) => setEmail(e.target.value)}
         />
-
-        <Input
-          label={t.signup.phone}
-          name="phone"
+        <Field
+          id="phone"
+          label={t("signup.phone")}
           type="tel"
           inputMode="tel"
           autoComplete="tel"
-          placeholder={t.signup.phonePlaceholder}
+          placeholder={t("signup.phonePlaceholder")}
+          required
           value={phone}
-          error={fieldErrors.phone}
-          disabled={submitting}
-          onChange={(event) => setPhone(event.target.value)}
+          onChange={(e) => setPhone(e.target.value)}
         />
-
-        <Input
-          label={t.signup.password}
-          name="password"
+        <Field
+          id="password"
+          label={t("signup.password")}
           type="password"
           autoComplete="new-password"
+          placeholder={t("signup.passwordPlaceholder")}
+          minLength={8}
+          required
           value={password}
-          error={fieldErrors.password}
-          hint={format(t.signup.passwordHint, { min: PASSWORD_MIN_LENGTH })}
-          disabled={submitting}
-          onChange={(event) => setPassword(event.target.value)}
+          onChange={(e) => setPassword(e.target.value)}
+          hint={t("signup.passwordHint")}
         />
 
-        <div className="flex flex-col gap-4">
-          <Button type="submit" loading={submitting}>
-            {submitting ? t.signup.submitting : t.signup.submit}
-          </Button>
-          <p className="text-sm leading-relaxed text-fest-cream/50">{t.signup.privacy}</p>
-        </div>
+        <FormError message={errorCode && t(`errors.${errorCode}`)} />
+
+        <PrimaryButton type="submit" disabled={!ready || busy}>
+          {busy ? t("signup.submitBusy") : t("signup.submit")}
+        </PrimaryButton>
       </form>
-    </FestivalShell>
+
+      <p className="mt-6 text-sm text-bone/60">
+        {t("signup.haveAccount")}{" "}
+        <Link href="/login" className="font-semibold text-gold underline">
+          {t("signup.login")}
+        </Link>
+      </p>
+    </SplitLayout>
   );
 }

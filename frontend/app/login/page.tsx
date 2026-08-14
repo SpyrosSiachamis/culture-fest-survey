@@ -1,119 +1,82 @@
 "use client";
 
 import { useState } from "react";
-
-import { errorMessage, isApiError, login } from "@/lib/api";
-import { setAccessToken } from "@/lib/session";
-import { makeValidators } from "@/lib/validation";
-import { useLang } from "@/components/LanguageProvider";
-import { Alert, Button, FestivalShell, InlineLink, Input } from "@/components/ui";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { SplitLayout } from "@/app/components/SplitLayout";
+import { PrimaryButton } from "@/app/components/PrimaryButton";
+import { Field, FormError } from "@/app/components/Field";
+import * as api from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
+import { useI18n } from "@/lib/i18n";
 
 export default function LoginPage() {
-  const { t } = useLang();
-  const v = makeValidators(t);
-
+  const router = useRouter();
+  const { setToken } = useAuth();
+  const { t } = useI18n();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
-  const [error, setError] = useState<{ status: string; message: string } | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [signedIn, setSignedIn] = useState(false);
+  const [errorCode, setErrorCode] = useState<api.ErrorCode | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  // The backend answers 403 with this status when the password was right but the address was
-  // never confirmed — the one case where we can safely point the user somewhere specific.
-  const needsVerification = error?.status === "email_not_verified";
+  const ready = email.trim() !== "" && password !== "";
 
-  async function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
-    if (submitting) return;
-
-    const errors = {
-      email: v.email(email) ?? undefined,
-      password: v.passwordPresent(password) ?? undefined,
-    };
-    setFieldErrors(errors);
-    if (errors.email || errors.password) return;
-
-    setSubmitting(true);
-    setError(null);
-
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!ready || busy) return;
+    setBusy(true);
+    setErrorCode(null);
     try {
-      const response = await login({ email: email.trim(), password });
-      setAccessToken(response.access_token);
-      setSignedIn(true);
-    } catch (caught) {
-      setError({
-        status: isApiError(caught) ? caught.status : "error",
-        message: errorMessage(caught),
-      });
-    } finally {
-      setSubmitting(false);
+      const token = await api.login({ email: email.trim(), password });
+      setToken(token);
+      router.push("/survey");
+    } catch (err) {
+      setErrorCode(err instanceof api.ApiError ? err.code : "generic");
+      setBusy(false);
     }
   }
 
-  if (signedIn) {
-    return (
-      <FestivalShell
-        eyebrow={t.eyebrows.done}
-        title={t.login.signedInHeading}
-        description={t.login.signedInBody}
-      >
-        <InlineLink href="/survey">
-          <Button type="button">{t.login.startSurvey}</Button>
-        </InlineLink>
-      </FestivalShell>
-    );
-  }
-
   return (
-    <FestivalShell
-      eyebrow={t.eyebrows.login}
-      title={t.login.heading}
-      description={t.login.intro}
-      footer={
-        <p className="text-center text-sm text-fest-cream/70">
-          {t.login.noAccount} <InlineLink href="/signup">{t.login.noAccountLink}</InlineLink>
-        </p>
-      }
-    >
-      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-6">
-        {error && (
-          <Alert tone={needsVerification ? "info" : "error"}>
-            {error.message}
-            {needsVerification && (
-              <> <InlineLink href="/verify">{t.login.enterCode}</InlineLink></>
-            )}
-          </Alert>
-        )}
+    <SplitLayout>
+      <h2 className="display text-4xl text-bone">{t("login.title")}</h2>
+      <p className="mt-3 text-sm text-bone/65">{t("login.intro")}</p>
 
-        <Input
-          label={t.login.email}
-          name="email"
+      <form onSubmit={onSubmit} className="mt-8 flex flex-col gap-6">
+        <Field
+          id="email"
+          label={t("login.email")}
           type="email"
           inputMode="email"
           autoComplete="email"
-          placeholder={t.signup.emailPlaceholder}
+          placeholder={t("login.emailPlaceholder")}
+          required
           value={email}
-          error={fieldErrors.email}
-          disabled={submitting}
-          onChange={(event) => setEmail(event.target.value)}
+          onChange={(e) => setEmail(e.target.value)}
         />
-
-        <Input
-          label={t.login.password}
-          name="password"
+        <Field
+          id="password"
+          label={t("login.password")}
           type="password"
           autoComplete="current-password"
+          placeholder={t("login.passwordPlaceholder")}
+          required
           value={password}
-          error={fieldErrors.password}
-          disabled={submitting}
-          onChange={(event) => setPassword(event.target.value)}
+          onChange={(e) => setPassword(e.target.value)}
         />
 
-        <Button type="submit" loading={submitting}>
-          {submitting ? t.common.signingIn : t.common.signIn}
-        </Button>
+        <FormError message={errorCode && t(`errors.${errorCode}`)} />
+
+        <PrimaryButton type="submit" disabled={!ready || busy}>
+          {busy ? t("login.submitBusy") : t("login.submit")}
+        </PrimaryButton>
       </form>
-    </FestivalShell>
+
+      <p className="mt-6 text-sm text-bone/60">
+        {t("login.noAccount")}{" "}
+        <Link href="/signup" className="font-semibold text-gold underline">
+          {t("login.signup")}
+        </Link>
+      </p>
+    </SplitLayout>
   );
 }

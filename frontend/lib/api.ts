@@ -1,207 +1,138 @@
+const BACKEND_PORT = 5000;
+
 /**
- * Thin client for the FastAPI backend.
+ * Where the browser sends API calls.
  *
- * Everything here is a convenience for the UI only. The server revalidates every field and owns
- * every security decision — nothing on this side of the wire is trusted.
+ * If NEXT_PUBLIC_API_URL is set it wins (that's the production path). Otherwise
+ * we derive it from whatever host the page was loaded from, so the same build
+ * works on localhost, a tailnet IP and a MagicDNS name without an env edit —
+ * hardcoding one host silently breaks the others.
+ *
+ * Each origin the frontend is served from still has to appear in the backend's
+ * ALLOWED_ORIGINS for CORS.
  */
+function apiUrl(): string {
+  const configured = process.env.NEXT_PUBLIC_API_URL;
+  if (configured) return configured.replace(/\/$/, "");
+  if (typeof window === "undefined") return `http://localhost:${BACKEND_PORT}`;
+  return `${window.location.protocol}//${window.location.hostname}:${BACKEND_PORT}`;
+}
 
-import { getAccessToken } from "@/lib/session";
+/** Keys under `errors.*` in the locale files. */
+export type ErrorCode =
+  | "duplicate"
+  | "invalid_credentials"
+  | "rate_limit"
+  | "network"
+  | "generic";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000";
+export class ApiError extends Error {
+  constructor(
+    public status: number,
+    public code: ErrorCode,
+    /** Raw server detail — for logs, never rendered to respondents. */
+    public detail?: string,
+  ) {
+    super(detail ?? code);
+    this.name = "ApiError";
+  }
+}
 
-/** Machine-readable states the account endpoints can report back. */
-export type VerificationStatus =
-  | "verified"
-  | "invalid"
-  | "expired"
-  | "too_many_attempts"
-  | "already_verified"
-  | "email_not_verified"
-  | "already_submitted"
-  | "rate_limited"
-  | "network_error";
+type FastApiDetail =
+  | string
+  | { msg?: string; loc?: (string | number)[] }[]
+  | undefined;
 
-export type ApiError = {
-  status: VerificationStatus | "error";
-  message: string;
+function readDetail(detail: FastApiDetail): string | undefined {
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail) && detail.length > 0) return detail[0]?.msg;
+  return undefined;
+}
+
+async function request<T>(
+  path: string,
+  options: { method?: string; body?: unknown; token?: string | null } = {},
+): Promise<T> {
+  const { method = "GET", body, token } = options;
+
+  let res: Response;
+  try {
+    res = await fetch(`${apiUrl()}${path}`, {
+      method,
+      headers: {
+        ...(body ? { "Content-Type": "application/json" } : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch {
+    // Network-level failure — also what a CORS rejection looks like from JS.
+    throw new ApiError(0, "network");
+  }
+
+  if (!res.ok) {
+    let detail: FastApiDetail;
+    try {
+      detail = (await res.json())?.detail;
+    } catch {
+      detail = undefined;
+    }
+    const code: ErrorCode =
+      res.status === 409
+        ? "duplicate"
+        : res.status === 401
+          ? "invalid_credentials"
+          : res.status === 429
+            ? "rate_limit"
+            : "generic";
+    throw new ApiError(res.status, code, readDetail(detail));
+  }
+
+  if (res.status === 204) return undefined as T;
+  return (await res.json()) as T;
+}
+
+export type Account = {
+  id: string;
+  has_voted: boolean;
+  created_at: string;
 };
 
-export type SignupInput = {
+export function signup(input: {
   email: string;
   phone: string;
   password: string;
-};
-
-export type SignupAccepted = {
-  message: string;
-  expires_in_minutes: number;
-};
-
-export type ResendAccepted = {
-  message: string;
-  cooldown_seconds: number;
-};
-
-export type VerificationResult = {
-  status: string;
-  message: string;
-};
+}): Promise<Account> {
+  return request<Account>("/accounts/signup", { method: "POST", body: input });
+}
 
 /**
- * Matches VERIFICATION_RESEND_COOLDOWN_SECONDS on the server. Used to seed the countdown right
- * after signup; every later value comes from the resend response itself.
+ * A 401 here maps to one single message regardless of cause — the backend
+ * deliberately does not distinguish "no such account" from "wrong password",
+ * and neither does the UI.
  */
-export const DEFAULT_RESEND_COOLDOWN_SECONDS = 60;
-
-const GENERIC_ERROR = "Something went wrong. Please try again.";
-const NETWORK_ERROR =
-  "Could not reach the server. Check your connection and try again.";
-const RATE_LIMITED =
-  "Too many requests. Please wait a moment before trying again.";
-
-/** FastAPI errors arrive as `detail`, which is a string, an object, or a validation array. */
-function readErrorBody(body: unknown, httpStatus: number): ApiError {
-  if (httpStatus === 429) {
-    // The verification endpoint also uses 429 for "too many attempts", so prefer its own status.
-    const detail = (body as { detail?: unknown } | null)?.detail;
-    if (detail && typeof detail === "object" && "status" in detail) {
-      const typed = detail as { status: VerificationStatus; message?: string };
-      return { status: typed.status, message: typed.message ?? RATE_LIMITED };
-    }
-    return { status: "rate_limited", message: RATE_LIMITED };
-  }
-
-  const detail = (body as { detail?: unknown } | null)?.detail;
-
-  if (typeof detail === "string") {
-    return { status: "error", message: detail };
-  }
-
-  if (Array.isArray(detail)) {
-    // Pydantic validation errors: surface the first message rather than the whole tree.
-    const first = detail[0] as { msg?: string } | undefined;
-    return {
-      status: "error",
-      message: first?.msg ? first.msg.replace(/^Value error, /, "") : GENERIC_ERROR,
-    };
-  }
-
-  if (detail && typeof detail === "object") {
-    const typed = detail as { status?: VerificationStatus; message?: string };
-    return {
-      status: typed.status ?? "error",
-      message: typed.message ?? GENERIC_ERROR,
-    };
-  }
-
-  return { status: "error", message: GENERIC_ERROR };
-}
-
-async function post<T>(path: string, payload: unknown): Promise<T> {
-  let response: Response;
-
-  try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-  } catch {
-    throw { status: "network_error", message: NETWORK_ERROR } satisfies ApiError;
-  }
-
-  const body = await response.json().catch(() => null);
-
-  if (!response.ok) {
-    throw readErrorBody(body, response.status);
-  }
-
-  return body as T;
-}
-
-export type LoginInput = {
+export async function login(input: {
   email: string;
   password: string;
-};
-
-export type TokenResponse = {
-  access_token: string;
-  token_type: string;
-};
-
-export function signup(input: SignupInput) {
-  return post<SignupAccepted>("/accounts/signup", input);
-}
-
-export function login(input: LoginInput) {
-  return post<TokenResponse>("/accounts/login", input);
-}
-
-export function verifyEmail(email: string, code: string) {
-  return post<VerificationResult>("/accounts/verify-email", { email, code });
-}
-
-export function resendVerificationCode(email: string) {
-  return post<ResendAccepted>("/accounts/verify-email/resend", { email });
-}
-
-/**
- * Submit the completed survey.
- *
- * The bearer token is the only thing identifying the caller, and the backend uses it purely to
- * check and flip `has_voted`. The stored response holds no reference back to the account, so no
- * identifier may be added to this payload.
- */
-export async function submitSurvey(payload: Record<string, unknown>): Promise<void> {
-  const token = getAccessToken();
-  if (!token) {
-    throw { status: "error", message: "Your session has expired. Sign in again." } satisfies ApiError;
-  }
-
-  let response: Response;
-  try {
-    response = await fetch(`${API_BASE_URL}/surveys/submit`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(payload),
-    });
-  } catch {
-    throw { status: "network_error", message: NETWORK_ERROR } satisfies ApiError;
-  }
-
-  if (response.ok) return;
-
-  const body = await response.json().catch(() => null);
-
-  if (response.status === 401) {
-    throw {
-      status: "error",
-      message: "Your session has expired. Sign in again to submit.",
-    } satisfies ApiError;
-  }
-
-  if (response.status === 409) {
-    throw {
-      status: "already_submitted",
-      message: "This account has already submitted a response. Thanks again!",
-    } satisfies ApiError;
-  }
-
-  throw readErrorBody(body, response.status);
-}
-
-export function isApiError(value: unknown): value is ApiError {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "message" in value &&
-    "status" in value
+}): Promise<string> {
+  const token = await request<{ access_token: string; token_type: string }>(
+    "/accounts/login",
+    { method: "POST", body: input },
   );
+  return token.access_token;
 }
 
-export function errorMessage(value: unknown): string {
-  return isApiError(value) ? value.message : GENERIC_ERROR;
+export function hasVoted(token: string): Promise<boolean> {
+  return request<boolean>("/accounts/me/has-voted", { token });
+}
+
+export function submitSurvey(
+  token: string,
+  payload: Record<string, unknown>,
+): Promise<{ message: string }> {
+  return request<{ message: string }>("/surveys/submit", {
+    method: "POST",
+    body: payload,
+    token,
+  });
 }
