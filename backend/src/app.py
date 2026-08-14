@@ -1,14 +1,23 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import os
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 from src.database.session import Base, engine
 from src.database import models  # noqa: F401 — registers models on Base
+from src.database.schema_patch import ensure_columns
+from src.rate_limit import limiter
 from src.routers import accounts
 from src.routers import surveys
 
 #TODO: Drop the database when testing is done, or use a separate test database. This is just for development purposes.
 
 app = FastAPI()
+
+# slowapi resolves the limiter from app.state at request time, so the @limiter.limit decorators on
+# the routers do nothing at all without these two lines.
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 _allowed_origins = [
     origin.strip()
@@ -24,6 +33,9 @@ app.add_middleware(
 )
 
 Base.metadata.create_all(bind=engine)
+# create_all() adds missing tables but never alters existing ones, so columns added to a model that
+# is already deployed need this additive patch. See src/database/schema_patch.py.
+ensure_columns(engine)
 
 @app.get('/health')
 def root():

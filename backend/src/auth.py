@@ -64,3 +64,16 @@ def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], db: Annotate
         raise HTTPException(401, "Token expired", headers={"WWW-Authenticate": "Bearer"})
     except jwt.InvalidTokenError:
         raise HTTPException(401, "Invalid token", headers={"WWW-Authenticate": "Bearer"})
+
+def get_current_verified_user(account: Annotated[Account, Depends(get_current_user)]) -> Account:
+    """get_current_user, plus a check that the account holder proved they own the email address.
+
+    Login already refuses unverified accounts, so this is defence in depth: it also invalidates any
+    token that was minted for an account before verification was introduced.
+    """
+    if account.email_verified_at is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Email address is not verified.",
+        )
+    return account

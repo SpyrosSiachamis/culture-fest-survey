@@ -10,6 +10,20 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-archivo-black);
+
+  /* Festival palette, read off the poster: violet at the top of the sheet running down through
+     magenta and hot pink into orange and gold. Used by the .fest-* surfaces below. */
+  --color-fest-violet: #4c1d95;
+  --color-fest-purple: #7c3aed;
+  --color-fest-magenta: #d6249f;
+  --color-fest-pink: #ff3d6e;
+  --color-fest-orange: #ff7a18;
+  --color-fest-gold: #ffc21a;
+  --color-fest-ink: #14031f;
+  /* Warm off-white. Pure #fff reads cold and clinical against this much saturation. */
+  --color-fest-cream: #f5efe6;
+  --color-fest-panel: #1b0d22;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -24,3 +38,95 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* ---------------------------------------------------------------------------------------------
+   Festival surfaces
+   ---------------------------------------------------------------------------------------------
+   Used by the account and survey screens. These deliberately ignore the light/dark tokens above:
+   the artwork is always a dark, saturated gradient, so the screens are always dark-on-bright
+   regardless of the visitor's system theme. The marketing home page is untouched by any of this.
+   --------------------------------------------------------------------------------------------- */
+
+.fest-surface {
+  position: relative;
+  isolation: isolate;
+  color: #ffffff;
+  background:
+    radial-gradient(115% 70% at 50% 0%, rgba(124, 58, 237, 0.95) 0%, rgba(124, 58, 237, 0) 62%),
+    radial-gradient(95% 55% at 50% 42%, rgba(214, 36, 159, 0.9) 0%, rgba(214, 36, 159, 0) 68%),
+    linear-gradient(
+      180deg,
+      #3b0f7a 0%,
+      #8b1cc4 26%,
+      #d6249f 48%,
+      #ff3d6e 66%,
+      #ff7a18 84%,
+      #ffc21a 100%
+    );
+  /* Deliberately not background-attachment: fixed — on pages taller than the viewport that
+     leaves the lower part of the document unpainted. */
+  background-size: 100% 100%;
+  min-height: 100%;
+}
+
+/* Faint starfield over the top third, echoing the poster's night-sky band. Purely decorative. */
+.fest-surface::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 55% 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    radial-gradient(1.5px 1.5px at 12% 18%, rgba(255, 255, 255, 0.75), transparent),
+    radial-gradient(1.5px 1.5px at 78% 12%, rgba(255, 255, 255, 0.6), transparent),
+    radial-gradient(1px 1px at 34% 34%, rgba(255, 255, 255, 0.55), transparent),
+    radial-gradient(1px 1px at 62% 26%, rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(1.5px 1.5px at 88% 40%, rgba(255, 255, 255, 0.45), transparent),
+    radial-gradient(1px 1px at 22% 48%, rgba(255, 255, 255, 0.4), transparent);
+}
+
+/* --- Chamfered geometry -------------------------------------------------------------------
+   The signature shape of this design: opposite corners (top-right and bottom-left) cut off, so
+   panels, buttons and cells read as cut card stock rather than rounded UI. Four sizes so the
+   bevel stays proportional to the element. */
+
+.notch-lg { clip-path: polygon(0 0, calc(100% - 26px) 0, 100% 26px, 100% 100%, 26px 100%, 0 calc(100% - 26px)); }
+.notch-md { clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 18px 100%, 0 calc(100% - 18px)); }
+.notch-sm { clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 13px, 100% 100%, 13px 100%, 0 calc(100% - 13px)); }
+.notch-xs { clip-path: polygon(0 0, calc(100% - 9px) 0, 100% 9px, 100% 100%, 9px 100%, 0 calc(100% - 9px)); }
+
+/* Hairline gradient border. clip-path crops a real border, so the edge is drawn as a 1px
+   gradient underlay with the panel painted on top of it. */
+.fest-edge {
+  padding: 1px;
+  background: linear-gradient(135deg, #ffc21a 0%, #d6249f 45%, #5b21b6 100%);
+}
+
+/* Card interior. Near-opaque so long body copy stays readable over the brightest gradient band. */
+.fest-panel {
+  background: linear-gradient(160deg, rgba(40, 18, 48, 0.97) 0%, rgba(20, 8, 26, 0.97) 100%);
+}
+
+/* Concentric double-ring stamp: outer hairline, a gap, then an inner ring. */
+.fest-stamp {
+  border: 1px solid rgba(245, 239, 230, 0.55);
+  box-shadow: inset 0 0 0 5px transparent, inset 0 0 0 6px rgba(245, 239, 230, 0.32);
+}
+
+/* Display type: heavy grotesque caps, tightened the way poster headlines are set. */
+.fest-display {
+  font-family: var(--font-display), "Arial Black", Impact, sans-serif;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+  line-height: 0.98;
+}
+
+/* Uppercase micro-label used for eyebrows, field labels and progress copy. */
+.fest-micro {
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-weight: 700;
+}
+
+
