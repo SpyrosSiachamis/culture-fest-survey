@@ -1,0 +1,103 @@
+{
+  "lang": {
+    "label": "Language",
+    "en": "EN",
+    "el": "ΕΛ"
+  },
+  "brand": {
+    "place": "Hersonissos · Crete",
+    "placeLong": "Hersonissos · Crete · September",
+    "line1": "Culture",
+    "line2": "Fest",
+    "tickerWords": ["Music", "Lineup", "Nights", "You"],
+    "anonTop": "100%",
+    "anonMain": "ANON",
+    "anonBottom": "No names",
+    "anonBody": "Your answers are never linked back to your account. Not by ID, not by email — by nothing at all."
+  },
+  "home": {
+    "tickerWords": ["Lineup", "Price", "Dates", "Vibes"],
+    "body": "Four artists. One island. We're asking you what the night should look like — who plays, what it costs, which date.",
+    "note": "Takes about two minutes. Your answers are stored with no link back to you — your account only stops the same person voting twice.",
+    "cta": "Start the survey",
+    "haveAccount": "Already signed up?",
+    "login": "Log in"
+  },
+  "signup": {
+    "title": "Get set up",
+    "intro": "Email and phone are both needed — it's how we keep one person to one vote. Neither is ever attached to your answers.",
+    "email": "Email",
+    "emailPlaceholder": "you@example.com",
+    "phone": "Phone",
+    "phonePlaceholder": "+30 694 123 4567",
+    "password": "Password",
+    "passwordPlaceholder": "At least 8 characters",
+    "passwordHint": "8 characters minimum.",
+    "submit": "Create account",
+    "submitBusy": "Setting up…",
+    "haveAccount": "Already have an account?",
+    "login": "Log in"
+  },
+  "login": {
+    "title": "Welcome back",
+    "intro": "Pick up where you left off.",
+    "email": "Email",
+    "emailPlaceholder": "you@example.com",
+    "password": "Password",
+    "passwordPlaceholder": "Your password",
+    "submit": "Log in",
+    "submitBusy": "Checking…",
+    "noAccount": "No account yet?",
+    "signup": "Sign up"
+  },
+  "survey": {
+    "stampTop": "Step",
+    "stampBottom": "Anonymous",
+    "progress": "{pct}% complete",
+    "next": "Next",
+    "back": "Back",
+    "q1": {
+      "kicker": "First up",
+      "question": "Which one's you?",
+      "helper": "This decides which questions we ask later, so pick the closest fit.",
+      "student": "Student",
+      "studentHint": "Studying here right now",
+      "tourist": "Tourist",
+      "touristHint": "Visiting Crete on holiday",
+      "local": "Local",
+      "localHint": "I live around Hersonissos"
+    },
+    "q2": {
+      "kicker": "Be honest",
+      "question": "How keen are you on a night like this?",
+      "helper": "1 is 'not my thing', 10 is 'tell me where to be'.",
+      "low": "Not really",
+      "high": "Already there"
+    },
+    "voted": {
+      "stamp": "DONE",
+      "title": "You're already in",
+      "body": "This account has submitted its answers. One account, one vote — that's how we keep the results honest."
+    },
+    "expired": {
+      "stamp": "AGAIN",
+      "title": "Session timed out",
+      "body": "Log back in and your answers will pick up from the top.",
+      "action": "Log in"
+    },
+    "preview": {
+      "stamp": "WIP",
+      "title": "That's the preview",
+      "body": "Fourteen more questions are on the way. So far: {audience}, keenness {interest}/10 — nothing has been sent to the server yet.",
+      "action": "Back to the start"
+    },
+    "statusStamp": "Status"
+  },
+  "errors": {
+    "duplicate": "That email or phone is already registered.",
+    "invalid_credentials": "Those details don't match. Try again.",
+    "rate_limit": "Too many attempts. Wait a minute and retry.",
+    "network": "Can't reach the server. Check your connection.",
+    "generic": "Something went wrong."
+  }
+}
