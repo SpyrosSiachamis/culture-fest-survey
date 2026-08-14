@@ -5,6 +5,8 @@
  * every security decision — nothing on this side of the wire is trusted.
  */
 
+import { getAccessToken } from "@/lib/session";
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000";
 
 /** Machine-readable states the account endpoints can report back. */
@@ -15,6 +17,7 @@ export type VerificationStatus =
   | "too_many_attempts"
   | "already_verified"
   | "email_not_verified"
+  | "already_submitted"
   | "rate_limited"
   | "network_error";
 
@@ -140,6 +143,54 @@ export function verifyEmail(email: string, code: string) {
 
 export function resendVerificationCode(email: string) {
   return post<ResendAccepted>("/accounts/verify-email/resend", { email });
+}
+
+/**
+ * Submit the completed survey.
+ *
+ * The bearer token is the only thing identifying the caller, and the backend uses it purely to
+ * check and flip `has_voted`. The stored response holds no reference back to the account, so no
+ * identifier may be added to this payload.
+ */
+export async function submitSurvey(payload: Record<string, unknown>): Promise<void> {
+  const token = getAccessToken();
+  if (!token) {
+    throw { status: "error", message: "Your session has expired. Sign in again." } satisfies ApiError;
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/surveys/submit`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    throw { status: "network_error", message: NETWORK_ERROR } satisfies ApiError;
+  }
+
+  if (response.ok) return;
+
+  const body = await response.json().catch(() => null);
+
+  if (response.status === 401) {
+    throw {
+      status: "error",
+      message: "Your session has expired. Sign in again to submit.",
+    } satisfies ApiError;
+  }
+
+  if (response.status === 409) {
+    throw {
+      status: "already_submitted",
+      message: "This account has already submitted a response. Thanks again!",
+    } satisfies ApiError;
+  }
+
+  throw readErrorBody(body, response.status);
 }
 
 export function isApiError(value: unknown): value is ApiError {

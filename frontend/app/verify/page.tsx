@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 import { FestivalShell, Stamp } from "@/components/ui";
@@ -34,9 +35,9 @@ export default function VerifyPage() {
         verified ? undefined : (
           <p className="text-center text-sm text-white/70">
             Need an account?{" "}
-            <a href="/signup" className="font-semibold text-fest-gold underline underline-offset-4">
+            <Link href="/signup" className="font-semibold text-fest-gold underline underline-offset-4">
               Sign up here
-            </a>
+            </Link>
           </p>
         )
       }

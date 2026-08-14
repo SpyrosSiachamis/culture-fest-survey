@@ -95,7 +95,7 @@ export function Input({ label, error, hint, id, className = "", ...props }: Inpu
 }
 
 type AlertProps = {
-  tone: "error" | "success" | "info";
+  tone: "error" | "success" | "info" | "warning";
   children: ReactNode;
 };
 
@@ -104,11 +104,12 @@ export function Alert({ tone, children }: AlertProps) {
     error: "border-red-400/50 bg-red-500/20 text-red-50",
     success: "border-fest-gold/60 bg-fest-gold/20 text-white",
     info: "border-white/25 bg-white/10 text-white/90",
+    warning: "border-orange-300/60 bg-orange-500/25 text-orange-50",
   };
 
   return (
     <div
-      role={tone === "error" ? "alert" : "status"}
+      role={tone === "error" || tone === "warning" ? "alert" : "status"}
       className={`w-full rounded-2xl border-2 px-4 py-3.5 text-base leading-relaxed ${tones[tone]}`}
     >
       {children}
@@ -227,6 +228,76 @@ export function ScaleGrid({
         <span>{lowLabel}</span>
         <span>{highLabel}</span>
       </div>
+    </div>
+  );
+}
+
+/** Multi-select chips. Each chip is its own toggle, so nothing needs a modifier key. */
+export function ChipGroup({
+  options,
+  selected,
+  onToggle,
+}: {
+  options: { value: string; label: string }[];
+  selected: string[];
+  onToggle: (value: string) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2.5">
+      {options.map((option) => {
+        const active = selected.includes(option.value);
+        return (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => onToggle(option.value)}
+            aria-pressed={active}
+            className={`fest-display flex min-h-12 items-center rounded-full border-2 px-5 text-lg transition-all duration-150 active:scale-95 ${
+              active
+                ? "border-fest-gold bg-fest-gold text-fest-ink"
+                : "border-white/25 bg-black/25 text-white hover:border-white/55"
+            }`}
+          >
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Free-text answer. Only used for the two optional long-form questions. */
+export function TextArea({
+  label,
+  value,
+  onChange,
+  placeholder,
+  maxLength,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  maxLength: number;
+}) {
+  const id = "survey-text";
+  return (
+    <div className="flex w-full flex-col gap-2">
+      <label htmlFor={id} className="fest-display text-sm tracking-[0.14em] text-fest-gold">
+        {label}
+      </label>
+      <textarea
+        id={id}
+        rows={4}
+        value={value}
+        maxLength={maxLength}
+        placeholder={placeholder}
+        onChange={(event) => onChange(event.target.value)}
+        className="w-full resize-none rounded-2xl border-2 border-white/25 bg-black/30 px-4 py-3 text-base text-white outline-none transition-colors placeholder:text-white/35 focus:border-fest-gold focus:bg-black/45"
+      />
+      <p className="text-right text-xs text-white/50">
+        {value.length} / {maxLength}
+      </p>
     </div>
   );
 }

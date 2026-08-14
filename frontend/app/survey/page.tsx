@@ -1,120 +1,125 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
+import { useMemo, useState } from "react";
 
+import { errorMessage, isApiError, submitSurvey } from "@/lib/api";
+import { getAccessToken } from "@/lib/session";
+import {
+  buildPayload,
+  questionsFor,
+  type Answers,
+  type AudienceType,
+  type Question,
+} from "@/lib/survey";
 import {
   Alert,
   Button,
+  ChipGroup,
   FestivalShell,
   OptionCard,
   ProgressBar,
   ScaleGrid,
   Stamp,
+  TextArea,
 } from "@/components/ui";
 
 /**
- * Survey wizard — one question per screen.
+ * Survey wizard — one question per screen, with the branch questions filtered in or out by the
+ * audience answered first.
  *
- * Only the first two questions are built here; this is the styling and interaction pattern the
- * remaining fourteen follow. Nothing is submitted yet: `POST /surveys/submit` validates the whole
- * response in one payload, so the call belongs on the last screen, not this one.
+ * The whole response is submitted in a single call at the end, because the backend validates the
+ * conditional fields against each other and only accepts a complete payload.
  */
-
-const TOTAL_QUESTIONS = 16;
-
-type AudienceType = "student" | "tourist" | "local";
-
-const AUDIENCE_OPTIONS: {
-  value: AudienceType;
-  label: string;
-  description: string;
-  /** What the branch adds later on, per the conditional fields the backend enforces. */
-  branchNote: string;
-}[] = [
-  {
-    value: "student",
-    label: "Student",
-    description: "Studying in or around Hersonissos",
-    branchNote: "We'll ask one extra question about your student transport pass.",
-  },
-  {
-    value: "tourist",
-    label: "Tourist",
-    description: "Visiting the area",
-    branchNote: "We'll ask about transport (€2 flat) and, optionally, where you're staying.",
-  },
-  {
-    value: "local",
-    label: "Local",
-    description: "Living here year-round",
-    branchNote: "",
-  },
-];
-
 export default function SurveyPage() {
-  const [step, setStep] = useState(1);
-  const [audience, setAudience] = useState<AudienceType | null>(null);
-  const [interest, setInterest] = useState<number | null>(null);
+  const [answers, setAnswers] = useState<Answers>({});
+  const [index, setIndex] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const selectedAudience = AUDIENCE_OPTIONS.find((option) => option.value === audience);
+  const audience = (answers.audience_type as AudienceType | undefined) ?? null;
+  const questions = useMemo(() => questionsFor(audience), [audience]);
+  const question = questions[Math.min(index, questions.length - 1)];
+  const isLast = index === questions.length - 1;
 
-  if (step === 1) {
+  const answer = answers[question.id];
+  const answered = Array.isArray(answer)
+    ? answer.length > 0
+    : answer !== undefined && answer !== null && answer !== "";
+  const canAdvance = question.optional || answered;
+
+  function setAnswer(value: Answers[keyof Answers]) {
+    setAnswers((current) => ({ ...current, [question.id]: value }));
+  }
+
+  function toggleMulti(value: string) {
+    const current = (answers[question.id] as string[] | undefined) ?? [];
+    setAnswer(
+      current.includes(value)
+        ? current.filter((entry) => entry !== value)
+        : [...current, value]
+    );
+  }
+
+  async function handleNext() {
+    if (!isLast) {
+      setIndex((current) => current + 1);
+      return;
+    }
+
+    setSubmitting(true);
+    setError(null);
+    try {
+      await submitSurvey(buildPayload(answers));
+      setSubmitted(true);
+    } catch (caught) {
+      // "Already submitted" is a finished state, not a failure to retry.
+      if (isApiError(caught) && caught.status === "already_submitted") {
+        setSubmitted(true);
+        return;
+      }
+      setError(errorMessage(caught));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  // Submission needs a bearer token, so there is no point letting someone fill in sixteen screens
+  // and only then discover they are signed out.
+  if (!getAccessToken() && !submitted) {
     return (
       <FestivalShell
-        title="Which one are you?"
-        description="This shapes the rest of the questions, so start here."
-        stamp={<Stamp top="Question" value="1" bottom={`of ${TOTAL_QUESTIONS}`} />}
-        footer={<ProgressBar current={1} total={TOTAL_QUESTIONS} />}
+        title="Sign in first"
+        description="The survey is one response per account, so we need you signed in before you start."
+        stamp={<Stamp top="Culture" value="FEST" bottom="Crete" />}
       >
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-3">
-            {AUDIENCE_OPTIONS.map((option) => (
-              <OptionCard
-                key={option.value}
-                label={option.label}
-                description={option.description}
-                selected={audience === option.value}
-                onSelect={() => setAudience(option.value)}
-              />
-            ))}
-          </div>
-
-          {selectedAudience?.branchNote && (
-            <Alert tone="info">{selectedAudience.branchNote}</Alert>
-          )}
-
-          <Button type="button" disabled={!audience} onClick={() => setStep(2)}>
-            Next
-          </Button>
+        <div className="flex flex-col gap-3">
+          <Link href="/login" className="contents">
+            <Button type="button">Sign in</Button>
+          </Link>
+          <Link href="/signup" className="contents">
+            <Button type="button" variant="secondary">
+              Create an account
+            </Button>
+          </Link>
         </div>
       </FestivalShell>
     );
   }
 
-  if (step === 2) {
+  if (submitted) {
     return (
       <FestivalShell
-        title="How into this are you?"
-        description="1 means you'd skip it, 10 means you're already telling your friends."
-        stamp={<Stamp top="Question" value="2" bottom={`of ${TOTAL_QUESTIONS}`} />}
-        footer={<ProgressBar current={2} total={TOTAL_QUESTIONS} />}
+        title="That's it"
+        description="Your answers are in. Thanks for helping shape the night."
+        stamp={<Stamp top="Status" value="OK" bottom="sent" tone="gold" />}
       >
-        <div className="flex flex-col gap-6">
-          <ScaleGrid
-            value={interest}
-            onChange={setInterest}
-            lowLabel="Not for me"
-            highLabel="Take my money"
-          />
-
-          <div className="flex flex-col gap-3">
-            <Button type="button" disabled={!interest} onClick={() => setStep(3)}>
-              Next
-            </Button>
-            <Button type="button" variant="secondary" onClick={() => setStep(1)}>
-              Back
-            </Button>
-          </div>
+        <div className="flex flex-col gap-4">
+          <Alert tone="success">
+            Response submitted. It is stored with no link back to your account — we cannot tell
+            which answers were yours.
+          </Alert>
         </div>
       </FestivalShell>
     );
@@ -122,20 +127,133 @@ export default function SurveyPage() {
 
   return (
     <FestivalShell
-      title="That's the pattern"
-      description="The remaining questions follow this same one-per-screen shape."
-      stamp={<Stamp top="Preview" value="2" bottom={`of ${TOTAL_QUESTIONS}`} tone="gold" />}
-      footer={<ProgressBar current={2} total={TOTAL_QUESTIONS} />}
+      title={question.title}
+      description={question.description}
+      stamp={
+        <Stamp top="Question" value={index + 1} bottom={`of ${questions.length}`} />
+      }
+      footer={<ProgressBar current={index + 1} total={questions.length} />}
     >
-      <div className="flex flex-col gap-4">
-        <Alert tone="info">
-          Preview build — questions 3 to {TOTAL_QUESTIONS} are not wired up yet, and nothing has
-          been submitted. Your answers so far: {selectedAudience?.label}, interest {interest}/10.
-        </Alert>
-        <Button type="button" variant="secondary" onClick={() => setStep(1)}>
-          Start over
-        </Button>
+      <div className="flex flex-col gap-5">
+        {error && <Alert tone="error">{error}</Alert>}
+        {question.warning && <Alert tone="warning">{question.warning}</Alert>}
+        {question.note && <Alert tone="info">{question.note}</Alert>}
+
+        <QuestionBody
+          question={question}
+          answers={answers}
+          onSet={setAnswer}
+          onToggleMulti={toggleMulti}
+        />
+
+        <div className="flex flex-col gap-3">
+          <Button
+            type="button"
+            disabled={!canAdvance}
+            loading={submitting}
+            onClick={handleNext}
+          >
+            {isLast ? (submitting ? "Sending" : "Submit") : "Next"}
+          </Button>
+
+          {question.optional && !answered && (
+            <button
+              type="button"
+              onClick={handleNext}
+              className="min-h-11 text-sm text-white/70 underline underline-offset-4 transition-colors hover:text-white"
+            >
+              Skip this one
+            </button>
+          )}
+
+          {index > 0 && (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setIndex((current) => current - 1)}
+            >
+              Back
+            </Button>
+          )}
+        </div>
       </div>
     </FestivalShell>
   );
+}
+
+function QuestionBody({
+  question,
+  answers,
+  onSet,
+  onToggleMulti,
+}: {
+  question: Question;
+  answers: Answers;
+  onSet: (value: Answers[keyof Answers]) => void;
+  onToggleMulti: (value: string) => void;
+}) {
+  const value = answers[question.id];
+
+  switch (question.kind) {
+    case "single":
+      return (
+        <div className="flex flex-col gap-3">
+          {question.options.map((option) => (
+            <OptionCard
+              key={option.value}
+              label={option.label}
+              description={option.description}
+              selected={value === option.value}
+              onSelect={() => onSet(option.value)}
+            />
+          ))}
+        </div>
+      );
+
+    case "bool":
+      return (
+        <div className="flex flex-col gap-3">
+          <OptionCard
+            label={question.trueLabel}
+            selected={value === true}
+            onSelect={() => onSet(true)}
+          />
+          <OptionCard
+            label={question.falseLabel}
+            selected={value === false}
+            onSelect={() => onSet(false)}
+          />
+        </div>
+      );
+
+    case "scale":
+      return (
+        <ScaleGrid
+          value={(value as number | undefined) ?? null}
+          onChange={(score) => onSet(score)}
+          lowLabel={question.lowLabel}
+          highLabel={question.highLabel}
+        />
+      );
+
+    case "multi":
+      return (
+        <ChipGroup
+          options={question.options}
+          selected={(value as string[] | undefined) ?? []}
+          onToggle={onToggleMulti}
+        />
+      );
+
+    case "text":
+      return (
+        <TextArea
+          label={question.optional ? "Optional" : "Your answer"}
+          value={(value as string | undefined) ?? ""}
+          onChange={(next) => onSet(next)}
+          placeholder={question.placeholder}
+          maxLength={question.maxLength}
+        />
+      );
+  }
 }

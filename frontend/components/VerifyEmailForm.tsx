@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 import {
@@ -127,9 +128,9 @@ export function VerifyEmailForm({
           Your address is confirmed and your account is active. Sign in and the survey is all
           yours.
         </p>
-        <a href="/login" className="contents">
+        <Link href="/login" className="contents">
           <Button type="button">Sign in</Button>
-        </a>
+        </Link>
       </div>
     );
   }

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 import { DEFAULT_RESEND_COOLDOWN_SECONDS, errorMessage, signup } from "@/lib/api";
@@ -87,9 +88,9 @@ export default function SignupPage() {
       footer={
         <p className="text-center text-sm text-white/70">
           Already signed up?{" "}
-          <a href="/verify" className="font-semibold text-fest-gold underline underline-offset-4">
+          <Link href="/verify" className="font-semibold text-fest-gold underline underline-offset-4">
             Enter your code
-          </a>
+          </Link>
         </p>
       }
     >

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 import { errorMessage, isApiError, login } from "@/lib/api";
@@ -57,9 +58,9 @@ export default function LoginPage() {
       >
         <div className="flex flex-col gap-4">
           <Alert tone="success">Signed in successfully.</Alert>
-          <a href="/survey" className="contents">
+          <Link href="/survey" className="contents">
             <Button type="button">Start the survey</Button>
-          </a>
+          </Link>
         </div>
       </FestivalShell>
     );
@@ -73,9 +74,9 @@ export default function LoginPage() {
       footer={
         <p className="text-center text-sm text-white/70">
           No account yet?{" "}
-          <a href="/signup" className="font-semibold text-fest-gold underline underline-offset-4">
+          <Link href="/signup" className="font-semibold text-fest-gold underline underline-offset-4">
             Sign up here
-          </a>
+          </Link>
         </p>
       }
     >
@@ -86,9 +87,9 @@ export default function LoginPage() {
             {needsVerification && (
               <>
                 {" "}
-                <a href="/verify" className="font-semibold text-fest-gold underline underline-offset-4">
+                <Link href="/verify" className="font-semibold text-fest-gold underline underline-offset-4">
                   Enter your code
-                </a>
+                </Link>
               </>
             )}
           </Alert>
