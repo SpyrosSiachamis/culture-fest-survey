@@ -13,6 +13,7 @@ import {
 import { CODE_LENGTH, makeValidators } from "@/lib/validation";
 import { useCooldown } from "@/hooks/useCooldown";
 import { useLang } from "@/components/LanguageProvider";
+import { format } from "@/lib/i18n";
 import { Alert, Button, InlineLink, Input } from "@/components/ui";
 
 type Props = {
@@ -185,7 +186,7 @@ export function VerifyEmailForm({
           disabled={cooldown.isCoolingDown}
           onClick={handleResend}
         >
-          {cooldown.isCoolingDown ? t.verify.resendIn(cooldown.secondsLeft) : t.verify.resend}
+          {cooldown.isCoolingDown ? format(t.verify.resendIn, { seconds: cooldown.secondsLeft }) : t.verify.resend}
         </Button>
 
         <p className="text-center text-sm leading-relaxed text-fest-cream/50">

@@ -13,7 +13,7 @@ import {
   type Question,
 } from "@/lib/survey";
 import { useLang } from "@/components/LanguageProvider";
-import type { Dictionary } from "@/lib/i18n";
+import { format, questionCopy, type Dictionary } from "@/lib/i18n";
 import {
   Alert,
   Button,
@@ -51,7 +51,7 @@ export default function SurveyPage() {
   // Before an audience is chosen the list holds only the first question, which would otherwise
   // make question one look like the final screen.
   const isLast = audience !== null && index === questions.length - 1;
-  const copy = t.survey[question.id];
+  const copy = questionCopy(t, question.id);
 
   const answer = answers[question.id];
   const answered = Array.isArray(answer)
@@ -141,10 +141,13 @@ export default function SurveyPage() {
       progress={
         <ProgressHeader
           stampTop={t.common.step}
-          stampValue={t.common.stepOf(index + 1, total)}
+          stampValue={format(t.common.stepOf, {
+            current: String(index + 1).padStart(2, "0"),
+            total,
+          })}
           stampBottom={t.common.anonymous}
           percent={percent}
-          caption={`${t.common.percentComplete(percent)} — ${t.common.noAnswerLinked}`}
+          caption={`${format(t.common.percentComplete, { percent })} — ${t.common.noAnswerLinked}`}
         />
       }
       eyebrow={copy.eyebrow}
@@ -197,7 +200,7 @@ function QuestionBody({
   onToggleMulti: (value: string) => void;
 }) {
   const value = answers[question.id];
-  const copy = t.survey[question.id];
+  const copy = questionCopy(t, question.id);
 
   switch (question.kind) {
     case "single":

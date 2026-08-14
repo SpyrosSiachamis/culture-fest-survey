@@ -5,7 +5,7 @@
  * performs the same validation independently and is the only place where it counts.
  */
 
-import type { Dictionary } from "@/lib/i18n";
+import { format, type Dictionary } from "@/lib/i18n";
 
 export const PASSWORD_MIN_LENGTH = 8;
 export const CODE_LENGTH = 6;
@@ -35,7 +35,7 @@ export function makeValidators(t: Dictionary) {
     password(value: string): string | null {
       if (!value) return t.errors.passwordRequired;
       if (value.length < PASSWORD_MIN_LENGTH) {
-        return t.errors.passwordShort(PASSWORD_MIN_LENGTH);
+        return format(t.errors.passwordShort, { min: PASSWORD_MIN_LENGTH });
       }
       if (value.length > 128) return t.errors.passwordLong;
       return null;

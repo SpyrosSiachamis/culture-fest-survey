@@ -5,6 +5,7 @@ import { useState } from "react";
 import { DEFAULT_RESEND_COOLDOWN_SECONDS, errorMessage, signup } from "@/lib/api";
 import { PASSWORD_MIN_LENGTH, makeValidators } from "@/lib/validation";
 import { useLang } from "@/components/LanguageProvider";
+import { format } from "@/lib/i18n";
 import { Alert, Button, FestivalShell, InlineLink, Input, Stamp } from "@/components/ui";
 import { VerifyEmailForm } from "@/components/VerifyEmailForm";
 
@@ -144,7 +145,7 @@ export default function SignupPage() {
           autoComplete="new-password"
           value={password}
           error={fieldErrors.password}
-          hint={t.signup.passwordHint(PASSWORD_MIN_LENGTH)}
+          hint={format(t.signup.passwordHint, { min: PASSWORD_MIN_LENGTH })}
           disabled={submitting}
           onChange={(event) => setPassword(event.target.value)}
         />
