@@ -1,14 +1,17 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 
 import { errorMessage, isApiError, login } from "@/lib/api";
 import { setAccessToken } from "@/lib/session";
-import { validateEmail } from "@/lib/validation";
-import { Alert, Button, FestivalShell, Input, Stamp } from "@/components/ui";
+import { makeValidators } from "@/lib/validation";
+import { useLang } from "@/components/LanguageProvider";
+import { Alert, Button, FestivalShell, InlineLink, Input } from "@/components/ui";
 
 export default function LoginPage() {
+  const { t } = useLang();
+  const v = makeValidators(t);
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
@@ -25,9 +28,8 @@ export default function LoginPage() {
     if (submitting) return;
 
     const errors = {
-      email: validateEmail(email) ?? undefined,
-      // Only checked for presence: never hint at the password rules on a sign-in form.
-      password: password ? undefined : "Enter your password.",
+      email: v.email(email) ?? undefined,
+      password: v.passwordPresent(password) ?? undefined,
     };
     setFieldErrors(errors);
     if (errors.email || errors.password) return;
@@ -52,56 +54,45 @@ export default function LoginPage() {
   if (signedIn) {
     return (
       <FestivalShell
-        title="You're in"
-        description="Signed in and ready. The survey takes about two minutes."
-        stamp={<Stamp top="Ready" value="GO" tone="gold" />}
+        eyebrow={t.eyebrows.done}
+        title={t.login.signedInHeading}
+        description={t.login.signedInBody}
       >
-        <div className="flex flex-col gap-4">
-          <Alert tone="success">Signed in successfully.</Alert>
-          <Link href="/survey" className="contents">
-            <Button type="button">Start the survey</Button>
-          </Link>
-        </div>
+        <InlineLink href="/survey">
+          <Button type="button">{t.login.startSurvey}</Button>
+        </InlineLink>
       </FestivalShell>
     );
   }
 
   return (
     <FestivalShell
-      title="Sign in"
-      description="Welcome back. Sign in to pick up where you left off."
-      stamp={<Stamp top="Culture" value="FEST" bottom="Crete" />}
+      eyebrow={t.eyebrows.login}
+      title={t.login.heading}
+      description={t.login.intro}
       footer={
-        <p className="text-center text-sm text-white/70">
-          No account yet?{" "}
-          <Link href="/signup" className="font-semibold text-fest-gold underline underline-offset-4">
-            Sign up here
-          </Link>
+        <p className="text-center text-sm text-fest-cream/70">
+          {t.login.noAccount} <InlineLink href="/signup">{t.login.noAccountLink}</InlineLink>
         </p>
       }
     >
-      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
+      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-6">
         {error && (
           <Alert tone={needsVerification ? "info" : "error"}>
             {error.message}
             {needsVerification && (
-              <>
-                {" "}
-                <Link href="/verify" className="font-semibold text-fest-gold underline underline-offset-4">
-                  Enter your code
-                </Link>
-              </>
+              <> <InlineLink href="/verify">{t.login.enterCode}</InlineLink></>
             )}
           </Alert>
         )}
 
         <Input
-          label="Email address"
+          label={t.login.email}
           name="email"
           type="email"
           inputMode="email"
           autoComplete="email"
-          placeholder="you@example.com"
+          placeholder={t.signup.emailPlaceholder}
           value={email}
           error={fieldErrors.email}
           disabled={submitting}
@@ -109,7 +100,7 @@ export default function LoginPage() {
         />
 
         <Input
-          label="Password"
+          label={t.login.password}
           name="password"
           type="password"
           autoComplete="current-password"
@@ -120,7 +111,7 @@ export default function LoginPage() {
         />
 
         <Button type="submit" loading={submitting}>
-          {submitting ? "Signing in" : "Sign in"}
+          {submitting ? t.common.signingIn : t.common.signIn}
         </Button>
       </form>
     </FestivalShell>

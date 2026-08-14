@@ -1,16 +1,100 @@
+"use client";
+
 /**
  * Festival UI primitives.
  *
- * Visual language is taken from the event poster: a violet→magenta→orange→gold gradient field,
- * heavy condensed caps for headlines, smoked-glass panels over the gradient so body copy stays
- * readable, and circular stamp badges for small callouts. The gradient, panel, stamp and display
- * treatments live in `app/globals.css` as `.fest-*` classes.
+ * The system's signature is geometric rather than decorative: opposite corners are chamfered on
+ * every surface (`.notch-*`), edges are 1px gradient hairlines (`.fest-edge`), callouts are
+ * concentric double-ring stamps, and text inputs are underlines rather than boxes. Type is heavy
+ * grotesque caps for headings with wide-tracked uppercase micro-labels. Those treatments live in
+ * `app/globals.css`.
  *
- * Mobile-first throughout: controls are 56px tall (comfortably over the 44px touch minimum), body
- * copy is never below 16px, and nothing exceeds the viewport at 375px.
+ * Mobile-first: controls are at least 56px tall, body copy never drops below 16px, and nothing
+ * overflows a 375px viewport.
  */
 
+import Link from "next/link";
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react";
+
+import { LANGUAGES } from "@/lib/i18n";
+import { useLang } from "@/components/LanguageProvider";
+
+/* ---------------------------------------------------------------------------- language toggle */
+
+export function LanguageToggle() {
+  const { lang, setLang } = useLang();
+
+  return (
+    <div className="flex" role="group" aria-label="Language">
+      {LANGUAGES.map(({ code, label }) => {
+        const active = lang === code;
+        return (
+          <button
+            key={code}
+            type="button"
+            onClick={() => setLang(code)}
+            aria-pressed={active}
+            className={`fest-display notch-xs flex h-11 w-16 items-center justify-center text-base transition-colors ${
+              active
+                ? "bg-fest-gold text-fest-ink"
+                : "bg-white/5 text-fest-cream/70 shadow-[inset_0_0_0_1px_rgba(245,239,230,0.3)] hover:text-fest-cream"
+            }`}
+          >
+            {label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ----------------------------------------------------------------------------------- surfaces */
+
+/** Chamfered card with a gradient hairline edge. */
+export function Panel({
+  children,
+  className = "",
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={`fest-edge notch-lg ${className}`}>
+      <div className="fest-panel notch-lg px-5 py-6 sm:px-7 sm:py-8">{children}</div>
+    </div>
+  );
+}
+
+/** Concentric double-ring stamp — the poster's badge device. */
+export function Stamp({
+  top,
+  value,
+  bottom,
+  tone = "light",
+  size = "md",
+}: {
+  top?: string;
+  value: ReactNode;
+  bottom?: string;
+  tone?: "light" | "gold";
+  size?: "md" | "lg";
+}) {
+  const dimensions = size === "lg" ? "h-32 w-32" : "h-24 w-24";
+  const palette =
+    tone === "gold" ? "bg-fest-gold text-fest-ink" : "bg-white/5 text-fest-cream";
+
+  return (
+    <div
+      className={`fest-stamp flex ${dimensions} shrink-0 flex-col items-center justify-center rounded-full text-center ${palette}`}
+    >
+      {top && <span className="fest-micro text-[9px] opacity-75">{top}</span>}
+      <span className="fest-display text-2xl leading-none">{value}</span>
+      {bottom && <span className="fest-micro text-[9px] opacity-75">{bottom}</span>}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------------------------ actions */
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: "primary" | "secondary";
@@ -26,14 +110,12 @@ export function Button({
   ...props
 }: ButtonProps) {
   const base =
-    "fest-display flex h-14 w-full items-center justify-center gap-2.5 rounded-full px-6 text-xl tracking-wide transition-all duration-150 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-45";
+    "fest-display notch-sm flex h-14 w-full items-center justify-center gap-2.5 px-6 text-xl transition-all duration-150 active:scale-[0.99] disabled:pointer-events-none disabled:opacity-40";
 
   const variants = {
-    // Gold on ink — the poster's brightest band, used for the one action that matters per screen.
-    primary:
-      "bg-fest-gold text-fest-ink shadow-[0_10px_30px_-10px_rgba(255,194,26,0.9)] hover:brightness-110",
+    primary: "bg-fest-gold text-fest-ink hover:brightness-110",
     secondary:
-      "border-2 border-white/45 bg-white/5 text-white hover:border-white/80 hover:bg-white/10",
+      "bg-white/[0.07] text-fest-cream shadow-[inset_0_0_0_2px_rgba(245,239,230,0.28)] hover:bg-white/15",
   };
 
   return (
@@ -53,22 +135,44 @@ export function Button({
   );
 }
 
+/** Understated text action, used for Back and Skip so they never compete with the primary. */
+export function TextAction({
+  children,
+  onClick,
+  arrow,
+}: {
+  children: ReactNode;
+  onClick: () => void;
+  arrow?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="fest-micro flex min-h-11 w-full items-center justify-center gap-2 text-xs text-fest-cream/65 transition-colors hover:text-fest-cream"
+    >
+      {arrow && <span aria-hidden="true">←</span>}
+      {children}
+    </button>
+  );
+}
+
+/* ------------------------------------------------------------------------------------- inputs */
+
 type InputProps = InputHTMLAttributes<HTMLInputElement> & {
   label: string;
   error?: string | null;
   hint?: string;
 };
 
+/** Underline-only field: a rule under the value rather than a boxed control. */
 export function Input({ label, error, hint, id, className = "", ...props }: InputProps) {
   const inputId = id ?? props.name ?? label.toLowerCase().replace(/\s+/g, "-");
   const describedBy = error ? `${inputId}-error` : hint ? `${inputId}-hint` : undefined;
 
   return (
-    <div className="flex w-full flex-col gap-2">
-      <label
-        htmlFor={inputId}
-        className="fest-display text-sm tracking-[0.14em] text-fest-gold"
-      >
+    <div className="flex w-full flex-col gap-1">
+      <label htmlFor={inputId} className="fest-micro text-[11px] text-fest-cream/55">
         {label}
       </label>
       <input
@@ -76,17 +180,17 @@ export function Input({ label, error, hint, id, className = "", ...props }: Inpu
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy}
         /* text-base keeps iOS Safari from auto-zooming the page on focus. */
-        className={`h-14 w-full rounded-2xl border-2 bg-black/30 px-4 text-base text-white outline-none transition-colors placeholder:text-white/35 focus:border-fest-gold focus:bg-black/45 disabled:opacity-50 ${
-          error ? "border-red-400/80" : "border-white/25"
+        className={`h-14 w-full border-b-2 bg-transparent text-lg text-fest-cream outline-none transition-colors placeholder:text-fest-cream/25 focus:border-fest-gold disabled:opacity-50 ${
+          error ? "border-red-400" : "border-white/25"
         } ${className}`}
         {...props}
       />
       {error ? (
-        <p id={`${inputId}-error`} className="text-sm font-medium text-red-300">
+        <p id={`${inputId}-error`} className="pt-1 text-sm font-medium text-red-300">
           {error}
         </p>
       ) : hint ? (
-        <p id={`${inputId}-hint`} className="text-sm text-white/60">
+        <p id={`${inputId}-hint`} className="pt-1 text-sm text-fest-cream/45">
           {hint}
         </p>
       ) : null}
@@ -94,179 +198,6 @@ export function Input({ label, error, hint, id, className = "", ...props }: Inpu
   );
 }
 
-type AlertProps = {
-  tone: "error" | "success" | "info" | "warning";
-  children: ReactNode;
-};
-
-export function Alert({ tone, children }: AlertProps) {
-  const tones = {
-    error: "border-red-400/50 bg-red-500/20 text-red-50",
-    success: "border-fest-gold/60 bg-fest-gold/20 text-white",
-    info: "border-white/25 bg-white/10 text-white/90",
-    warning: "border-orange-300/60 bg-orange-500/25 text-orange-50",
-  };
-
-  return (
-    <div
-      role={tone === "error" || tone === "warning" ? "alert" : "status"}
-      className={`w-full rounded-2xl border-2 px-4 py-3.5 text-base leading-relaxed ${tones[tone]}`}
-    >
-      {children}
-    </div>
-  );
-}
-
-/**
- * Circular stamp badge — the poster's "16TH ANNUAL" / "FREE" device.
- * Used for step counters and short status callouts.
- */
-export function Stamp({
-  top,
-  value,
-  bottom,
-  tone = "light",
-}: {
-  top?: string;
-  value: ReactNode;
-  bottom?: string;
-  tone?: "light" | "gold";
-}) {
-  const palette =
-    tone === "gold"
-      ? "bg-fest-gold text-fest-ink border-fest-ink/25"
-      : "bg-white/10 text-white";
-
-  return (
-    <div
-      className={`fest-stamp fest-display flex h-20 w-20 shrink-0 flex-col items-center justify-center rounded-full text-center ${palette}`}
-    >
-      {top && <span className="text-[8px] tracking-[0.18em] opacity-80">{top}</span>}
-      <span className="text-2xl leading-none">{value}</span>
-      {bottom && <span className="text-[8px] tracking-[0.18em] opacity-80">{bottom}</span>}
-    </div>
-  );
-}
-
-/**
- * Large tappable answer card for single-choice survey questions.
- * Full width and 72px tall, so it clears the 44px touch minimum with room to spare.
- */
-export function OptionCard({
-  label,
-  description,
-  selected,
-  onSelect,
-}: {
-  label: string;
-  description?: string;
-  selected: boolean;
-  onSelect: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      aria-pressed={selected}
-      className={`flex min-h-[4.5rem] w-full flex-col items-start justify-center gap-1 rounded-2xl border-2 px-5 py-3 text-left transition-all duration-150 active:scale-[0.99] ${
-        selected
-          ? "border-fest-gold bg-fest-gold/20 shadow-[0_0_0_3px_rgba(255,194,26,0.25)]"
-          : "border-white/25 bg-black/25 hover:border-white/50 hover:bg-black/35"
-      }`}
-    >
-      <span
-        className={`fest-display text-2xl ${selected ? "text-fest-gold" : "text-white"}`}
-      >
-        {label}
-      </span>
-      {description && (
-        <span className="text-sm leading-snug text-white/65">{description}</span>
-      )}
-    </button>
-  );
-}
-
-/**
- * 1–10 rating as a grid of big tappable numbers.
- * A native range slider is far too fiddly on a phone, so this uses 5 columns of 56px targets.
- */
-export function ScaleGrid({
-  value,
-  onChange,
-  lowLabel,
-  highLabel,
-}: {
-  value: number | null;
-  onChange: (value: number) => void;
-  lowLabel: string;
-  highLabel: string;
-}) {
-  return (
-    <div className="flex flex-col gap-3">
-      <div className="grid grid-cols-5 gap-2.5">
-        {Array.from({ length: 10 }, (_, index) => index + 1).map((score) => {
-          const selected = value === score;
-          return (
-            <button
-              key={score}
-              type="button"
-              onClick={() => onChange(score)}
-              aria-pressed={selected}
-              aria-label={`${score} out of 10`}
-              className={`fest-display flex h-14 items-center justify-center rounded-xl border-2 text-2xl transition-all duration-150 active:scale-95 ${
-                selected
-                  ? "border-fest-gold bg-fest-gold text-fest-ink"
-                  : "border-white/25 bg-black/25 text-white hover:border-white/55"
-              }`}
-            >
-              {score}
-            </button>
-          );
-        })}
-      </div>
-      <div className="flex justify-between text-xs text-white/60">
-        <span>{lowLabel}</span>
-        <span>{highLabel}</span>
-      </div>
-    </div>
-  );
-}
-
-/** Multi-select chips. Each chip is its own toggle, so nothing needs a modifier key. */
-export function ChipGroup({
-  options,
-  selected,
-  onToggle,
-}: {
-  options: { value: string; label: string }[];
-  selected: string[];
-  onToggle: (value: string) => void;
-}) {
-  return (
-    <div className="flex flex-wrap gap-2.5">
-      {options.map((option) => {
-        const active = selected.includes(option.value);
-        return (
-          <button
-            key={option.value}
-            type="button"
-            onClick={() => onToggle(option.value)}
-            aria-pressed={active}
-            className={`fest-display flex min-h-12 items-center rounded-full border-2 px-5 text-lg transition-all duration-150 active:scale-95 ${
-              active
-                ? "border-fest-gold bg-fest-gold text-fest-ink"
-                : "border-white/25 bg-black/25 text-white hover:border-white/55"
-            }`}
-          >
-            {option.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-/** Free-text answer. Only used for the two optional long-form questions. */
 export function TextArea({
   label,
   value,
@@ -282,8 +213,8 @@ export function TextArea({
 }) {
   const id = "survey-text";
   return (
-    <div className="flex w-full flex-col gap-2">
-      <label htmlFor={id} className="fest-display text-sm tracking-[0.14em] text-fest-gold">
+    <div className="flex w-full flex-col gap-1">
+      <label htmlFor={id} className="fest-micro text-[11px] text-fest-cream/55">
         {label}
       </label>
       <textarea
@@ -293,77 +224,285 @@ export function TextArea({
         maxLength={maxLength}
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full resize-none rounded-2xl border-2 border-white/25 bg-black/30 px-4 py-3 text-base text-white outline-none transition-colors placeholder:text-white/35 focus:border-fest-gold focus:bg-black/45"
+        className="notch-sm w-full resize-none bg-white/5 px-4 py-3 text-base text-fest-cream outline-none shadow-[inset_0_0_0_1px_rgba(245,239,230,0.25)] transition-colors placeholder:text-fest-cream/25 focus:shadow-[inset_0_0_0_2px_#ffc21a]"
       />
-      <p className="text-right text-xs text-white/50">
+      <p className="pt-1 text-right text-xs text-fest-cream/40">
         {value.length} / {maxLength}
       </p>
     </div>
   );
 }
 
-/** Slim progress bar for the wizard, sitting under the headline. */
-export function ProgressBar({ current, total }: { current: number; total: number }) {
-  const pct = Math.round((current / total) * 100);
+/* ------------------------------------------------------------------------------------ answers */
+
+/** Lettered answer row (A / B / C), chamfered, with a circular index badge. */
+export function OptionCard({
+  letter,
+  label,
+  description,
+  selected,
+  onSelect,
+}: {
+  letter: string;
+  label: string;
+  description?: string;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  // clip-path crops a real border, so the outline is a 1px underlay behind the fill, clipped to
+  // the same shape. That keeps the edge unbroken around the chamfered corners.
   return (
-    <div
-      className="h-2 w-full overflow-hidden rounded-full bg-black/35"
-      role="progressbar"
-      aria-valuenow={current}
-      aria-valuemin={0}
-      aria-valuemax={total}
-      aria-label={`Question ${current} of ${total}`}
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-pressed={selected}
+      className={`notch-md block w-full p-px text-left transition-all duration-150 active:scale-[0.995] ${
+        selected ? "bg-fest-gold" : "bg-white/20 hover:bg-white/40"
+      }`}
     >
-      <div
-        className="h-full rounded-full bg-fest-gold transition-all duration-300"
-        style={{ width: `${pct}%` }}
-      />
+      <span
+        className={`notch-md flex min-h-[4.5rem] w-full items-center gap-4 px-4 py-3 ${
+          selected ? "bg-fest-gold/15" : "bg-[#22102b]"
+        }`}
+      >
+        <span
+          className={`fest-display flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-lg ${
+            selected ? "bg-fest-gold text-fest-ink" : "bg-white/10 text-fest-cream/80"
+          }`}
+        >
+          {letter}
+        </span>
+        <span className="flex min-w-0 flex-col gap-0.5">
+          <span
+            className={`fest-display text-xl ${selected ? "text-fest-gold" : "text-fest-cream"}`}
+          >
+            {label}
+          </span>
+          {description && (
+            <span className="text-sm leading-snug text-fest-cream/55">{description}</span>
+          )}
+        </span>
+      </span>
+    </button>
+  );
+}
+
+/** 1–10 rating as chamfered tap targets. A range slider is unusable on a phone. */
+export function ScaleGrid({
+  value,
+  onChange,
+  lowLabel,
+  highLabel,
+}: {
+  value: number | null;
+  onChange: (value: number) => void;
+  lowLabel: string;
+  highLabel: string;
+}) {
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="grid grid-cols-5 gap-2">
+        {Array.from({ length: 10 }, (_, index) => index + 1).map((score) => {
+          const selected = value === score;
+          return (
+            <button
+              key={score}
+              type="button"
+              onClick={() => onChange(score)}
+              aria-pressed={selected}
+              aria-label={`${score} out of 10`}
+              className={`notch-xs block h-14 p-px transition-all duration-150 active:scale-95 ${
+                selected ? "bg-fest-gold" : "bg-white/20 hover:bg-white/45"
+              }`}
+            >
+              <span
+                className={`fest-display notch-xs flex h-full w-full items-center justify-center text-2xl ${
+                  selected ? "bg-fest-gold text-fest-ink" : "bg-[#22102b] text-fest-cream"
+                }`}
+              >
+                {score}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      <div className="flex justify-between gap-3">
+        <span className="fest-micro text-[10px] text-fest-cream/50">{lowLabel}</span>
+        <span className="fest-micro text-[10px] text-fest-cream/50">{highLabel}</span>
+      </div>
     </div>
   );
 }
 
+/** Multi-select chips. Each is an independent toggle. */
+export function ChipGroup({
+  options,
+  selected,
+  onToggle,
+}: {
+  options: { value: string; label: string }[];
+  selected: string[];
+  onToggle: (value: string) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {options.map((option) => {
+        const active = selected.includes(option.value);
+        return (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => onToggle(option.value)}
+            aria-pressed={active}
+            className={`notch-xs block p-px transition-all duration-150 active:scale-95 ${
+              active ? "bg-fest-gold" : "bg-white/20 hover:bg-white/45"
+            }`}
+          >
+            <span
+              className={`fest-display notch-xs flex min-h-12 items-center px-4 text-base ${
+                active ? "bg-fest-gold text-fest-ink" : "bg-[#22102b] text-fest-cream"
+              }`}
+            >
+              {option.label}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------------- feedback */
+
+type AlertProps = {
+  tone: "error" | "success" | "info" | "warning";
+  children: ReactNode;
+};
+
+export function Alert({ tone, children }: AlertProps) {
+  const tones = {
+    error: "bg-red-500/15 text-red-100 ring-red-400/50",
+    success: "bg-fest-gold/15 text-fest-cream ring-fest-gold/60",
+    info: "bg-white/[0.06] text-fest-cream/85 ring-white/25",
+    warning: "bg-orange-500/20 text-orange-50 ring-orange-300/60",
+  };
+
+  return (
+    <div
+      role={tone === "error" || tone === "warning" ? "alert" : "status"}
+      className={`notch-sm w-full px-4 py-3.5 text-base leading-relaxed shadow-[inset_0_0_0_1px_currentColor] ${tones[tone]}`}
+    >
+      {children}
+    </div>
+  );
+}
+
+/** Step stamp, gradient progress rail and its caption. */
+export function ProgressHeader({
+  stampTop,
+  stampValue,
+  stampBottom,
+  percent,
+  caption,
+}: {
+  stampTop: string;
+  stampValue: string;
+  stampBottom: string;
+  percent: number;
+  caption: string;
+}) {
+  return (
+    <div className="flex items-center gap-4">
+      <Stamp top={stampTop} value={stampValue} bottom={stampBottom} />
+      <div className="flex min-w-0 flex-1 flex-col gap-2.5">
+        <div
+          className="h-2 w-full overflow-hidden bg-black/30"
+          role="progressbar"
+          aria-valuenow={percent}
+          aria-valuemin={0}
+          aria-valuemax={100}
+        >
+          <div
+            className="h-full bg-gradient-to-r from-fest-pink via-fest-orange to-fest-gold transition-all duration-300"
+            style={{ width: `${percent}%` }}
+          />
+        </div>
+        <p className="fest-micro text-[10px] leading-relaxed text-fest-cream/55">{caption}</p>
+      </div>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------------------- shell */
+
 /**
- * Full-bleed festival screen: gradient field, a headline set in display caps, and a glass panel
- * holding the interactive content.
+ * Page frame: the gradient field, the language toggle, an optional progress header, and the
+ * chamfered panel holding the content.
  */
 export function FestivalShell({
+  progress,
   eyebrow,
   title,
   description,
-  stamp,
   children,
   footer,
+  hero,
 }: {
+  progress?: ReactNode;
   eyebrow?: string;
-  title: string;
+  title?: string;
   description?: ReactNode;
-  stamp?: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
+  hero?: ReactNode;
 }) {
   return (
-    <div className="fest-surface flex flex-1 flex-col items-center px-4 py-10 sm:py-16">
-      <main className="flex w-full max-w-md flex-col gap-6">
-        <header className="flex items-start justify-between gap-4">
-          <div className="flex flex-col gap-2">
-            {eyebrow && (
-              <p className="fest-display text-xs tracking-[0.28em] text-white/75">{eyebrow}</p>
+    <div className="fest-surface flex flex-1 flex-col items-center px-4 pb-12 pt-5">
+      <div className="flex w-full max-w-md flex-col gap-5">
+        <div className="flex justify-end">
+          <LanguageToggle />
+        </div>
+
+        {hero}
+        {progress}
+
+        <Panel>
+          <div className="flex flex-col gap-5">
+            {(eyebrow || title || description) && (
+              <div className="flex flex-col gap-3">
+                {eyebrow && (
+                  <p className="fest-micro text-[11px] text-fest-gold">{eyebrow}</p>
+                )}
+                {title && (
+                  <h1 className="fest-display text-[2.1rem] text-fest-cream sm:text-4xl">
+                    {title}
+                  </h1>
+                )}
+                {description && (
+                  <p className="text-base leading-relaxed text-fest-cream/65">{description}</p>
+                )}
+              </div>
             )}
-            <h1 className="fest-display text-[2.75rem] text-white drop-shadow-[0_3px_0_rgba(0,0,0,0.25)] sm:text-5xl">
-              {title}
-            </h1>
+            {children}
           </div>
-          {stamp}
-        </header>
+        </Panel>
 
-        {description && (
-          <p className="text-base leading-relaxed text-white/85">{description}</p>
-        )}
-
-        <div className="fest-panel rounded-3xl p-5 sm:p-6">{children}</div>
-
-        {footer}
-      </main>
+        {/* The gradient ends in bright gold, so footer copy gets a dark chip rather than
+            relying on whichever band it happens to land on. */}
+        {footer && <div className="notch-sm bg-black/45 px-4 py-3">{footer}</div>}
+      </div>
     </div>
+  );
+}
+
+/** Inline link styled to the system. */
+export function InlineLink({ href, children }: { href: string; children: ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className="font-semibold text-fest-gold underline underline-offset-4 hover:brightness-110"
+    >
+      {children}
+    </Link>
   );
 }

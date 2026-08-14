@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 
 import {
@@ -11,9 +10,10 @@ import {
   verifyEmail,
   type VerificationStatus,
 } from "@/lib/api";
-import { CODE_LENGTH, validateCode, validateEmail } from "@/lib/validation";
+import { CODE_LENGTH, makeValidators } from "@/lib/validation";
 import { useCooldown } from "@/hooks/useCooldown";
-import { Alert, Button, Input } from "@/components/ui";
+import { useLang } from "@/components/LanguageProvider";
+import { Alert, Button, InlineLink, Input } from "@/components/ui";
 
 type Props = {
   /** Carried over from signup so the user does not have to retype it. */
@@ -42,6 +42,9 @@ export function VerifyEmailForm({
   initialCooldownSeconds = 0,
   onVerified,
 }: Props) {
+  const { t } = useLang();
+  const v = makeValidators(t);
+
   const [email, setEmail] = useState(initialEmail);
   const [code, setCode] = useState("");
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; code?: string }>({});
@@ -65,8 +68,8 @@ export function VerifyEmailForm({
     if (submitting || verified) return;
 
     const errors = {
-      email: validateEmail(email) ?? undefined,
-      code: validateCode(code) ?? undefined,
+      email: v.email(email) ?? undefined,
+      code: v.code(code) ?? undefined,
     };
     setFieldErrors(errors);
     if (errors.email || errors.code) return;
@@ -91,7 +94,7 @@ export function VerifyEmailForm({
   async function handleResend() {
     if (resending || cooldown.isCoolingDown || verified) return;
 
-    const emailError = validateEmail(email);
+    const emailError = v.email(email);
     if (emailError) {
       setFieldErrors((current) => ({ ...current, email: emailError }));
       return;
@@ -124,45 +127,39 @@ export function VerifyEmailForm({
     return (
       <div className="flex flex-col gap-5">
         <Alert tone="success">{result?.message}</Alert>
-        <p className="text-base leading-relaxed text-white/80">
-          Your address is confirmed and your account is active. Sign in and the survey is all
-          yours.
-        </p>
-        <Link href="/login" className="contents">
-          <Button type="button">Sign in</Button>
-        </Link>
+        <p className="text-base leading-relaxed text-fest-cream/70">{t.verify.verifiedBody}</p>
+        <InlineLink href="/login">
+          <Button type="button">{t.common.signIn}</Button>
+        </InlineLink>
       </div>
     );
   }
 
   return (
-    <form onSubmit={handleVerify} noValidate className="flex flex-col gap-5">
-      {result && (
-        <Alert tone={STATUS_TONE[result.status] ?? "error"}>{result.message}</Alert>
-      )}
+    <form onSubmit={handleVerify} noValidate className="flex flex-col gap-6">
+      {result && <Alert tone={STATUS_TONE[result.status] ?? "error"}>{result.message}</Alert>}
 
       {emailEditable ? (
         <Input
-          label="Email address"
+          label={t.verify.editEmail}
           name="email"
           type="email"
           inputMode="email"
           autoComplete="email"
-          placeholder="you@example.com"
+          placeholder={t.signup.emailPlaceholder}
           value={email}
           error={fieldErrors.email}
           disabled={submitting}
           onChange={(event) => setEmail(event.target.value)}
         />
       ) : (
-        <p className="text-base leading-relaxed text-white/80">
-          Code sent to{" "}
-          <span className="font-semibold text-fest-gold">{email}</span>
+        <p className="text-base leading-relaxed text-fest-cream/70">
+          {t.verify.sentTo} <span className="font-semibold text-fest-gold">{email}</span>
         </p>
       )}
 
       <Input
-        label={`${CODE_LENGTH}-digit code`}
+        label={t.verify.codeLabel}
         name="code"
         type="text"
         inputMode="numeric"
@@ -172,15 +169,15 @@ export function VerifyEmailForm({
         value={code}
         error={fieldErrors.code}
         disabled={submitting}
-        className="h-20 text-center font-mono text-4xl tracking-[0.32em] sm:tracking-[0.4em]"
+        className="h-20 text-center font-mono text-4xl tracking-[0.3em]"
         onChange={(event) => setCode(event.target.value.replace(/\D/g, ""))}
       />
 
-      <Button type="submit" loading={submitting} disabled={needsNewCode}>
-        {submitting ? "Verifying" : "Verify email"}
-      </Button>
+      <div className="flex flex-col gap-3">
+        <Button type="submit" loading={submitting} disabled={needsNewCode}>
+          {submitting ? t.verify.verifying : t.verify.verify}
+        </Button>
 
-      <div className="flex flex-col items-center gap-3 border-t border-white/15 pt-5">
         <Button
           type="button"
           variant="secondary"
@@ -188,12 +185,11 @@ export function VerifyEmailForm({
           disabled={cooldown.isCoolingDown}
           onClick={handleResend}
         >
-          {cooldown.isCoolingDown
-            ? `Resend in ${cooldown.secondsLeft}s`
-            : "Send a new code"}
+          {cooldown.isCoolingDown ? t.verify.resendIn(cooldown.secondsLeft) : t.verify.resend}
         </Button>
-        <p className="text-center text-sm leading-relaxed text-white/70">
-          Codes last 15 minutes and work once. Check your spam folder if nothing lands.
+
+        <p className="text-center text-sm leading-relaxed text-fest-cream/50">
+          {t.verify.footnote}
         </p>
       </div>
     </form>

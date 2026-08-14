@@ -10,7 +10,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --font-display: var(--font-anton);
+  --font-display: var(--font-archivo-black);
 
   /* Festival palette, read off the poster: violet at the top of the sheet running down through
      magenta and hot pink into orange and gold. Used by the .fest-* surfaces below. */
@@ -21,6 +21,9 @@
   --color-fest-orange: #ff7a18;
   --color-fest-gold: #ffc21a;
   --color-fest-ink: #14031f;
+  /* Warm off-white. Pure #fff reads cold and clinical against this much saturation. */
+  --color-fest-cream: #f5efe6;
+  --color-fest-panel: #1b0d22;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -60,7 +63,10 @@ body {
       #ff7a18 84%,
       #ffc21a 100%
     );
-  background-attachment: fixed;
+  /* Deliberately not background-attachment: fixed — on pages taller than the viewport that
+     leaves the lower part of the document unpainted. */
+  background-size: 100% 100%;
+  min-height: 100%;
 }
 
 /* Faint starfield over the top third, echoing the poster's night-sky band. Purely decorative. */
@@ -79,33 +85,48 @@ body {
     radial-gradient(1px 1px at 22% 48%, rgba(255, 255, 255, 0.4), transparent);
 }
 
-/* Smoked-glass card holding the actual content, so text stays legible over the gradient. */
+/* --- Chamfered geometry -------------------------------------------------------------------
+   The signature shape of this design: opposite corners (top-right and bottom-left) cut off, so
+   panels, buttons and cells read as cut card stock rather than rounded UI. Four sizes so the
+   bevel stays proportional to the element. */
+
+.notch-lg { clip-path: polygon(0 0, calc(100% - 26px) 0, 100% 26px, 100% 100%, 26px 100%, 0 calc(100% - 26px)); }
+.notch-md { clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 18px 100%, 0 calc(100% - 18px)); }
+.notch-sm { clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 13px, 100% 100%, 13px 100%, 0 calc(100% - 13px)); }
+.notch-xs { clip-path: polygon(0 0, calc(100% - 9px) 0, 100% 9px, 100% 100%, 9px 100%, 0 calc(100% - 9px)); }
+
+/* Hairline gradient border. clip-path crops a real border, so the edge is drawn as a 1px
+   gradient underlay with the panel painted on top of it. */
+.fest-edge {
+  padding: 1px;
+  background: linear-gradient(135deg, #ffc21a 0%, #d6249f 45%, #5b21b6 100%);
+}
+
+/* Card interior. Near-opaque so long body copy stays readable over the brightest gradient band. */
 .fest-panel {
-  background: rgba(16, 4, 28, 0.72);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  box-shadow:
-    0 24px 60px -24px rgba(0, 0, 0, 0.75),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(16px) saturate(140%);
-  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  background: linear-gradient(160deg, rgba(40, 18, 48, 0.97) 0%, rgba(20, 8, 26, 0.97) 100%);
 }
 
-/* Circular stamp, the poster's "16TH ANNUAL" / "FREE" device. Used for step and status callouts. */
+/* Concentric double-ring stamp: outer hairline, a gap, then an inner ring. */
 .fest-stamp {
-  border: 2px solid rgba(255, 255, 255, 0.9);
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(245, 239, 230, 0.55);
+  box-shadow: inset 0 0 0 5px transparent, inset 0 0 0 6px rgba(245, 239, 230, 0.32);
 }
 
-/* Display type: heavy condensed caps, tightened up the way poster headlines are set. */
+/* Display type: heavy grotesque caps, tightened the way poster headlines are set. */
 .fest-display {
-  font-family: var(--font-display), "Arial Narrow", Impact, sans-serif;
+  font-family: var(--font-display), "Arial Black", Impact, sans-serif;
+  font-weight: 900;
   text-transform: uppercase;
-  letter-spacing: 0.01em;
-  line-height: 0.92;
+  letter-spacing: -0.02em;
+  line-height: 0.98;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .fest-surface {
-    background-attachment: scroll;
-  }
+/* Uppercase micro-label used for eyebrows, field labels and progress copy. */
+.fest-micro {
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-weight: 700;
 }
+
+

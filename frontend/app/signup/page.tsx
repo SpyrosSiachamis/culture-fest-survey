@@ -1,16 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 
 import { DEFAULT_RESEND_COOLDOWN_SECONDS, errorMessage, signup } from "@/lib/api";
-import {
-  PASSWORD_MIN_LENGTH,
-  validateEmail,
-  validatePassword,
-  validatePhone,
-} from "@/lib/validation";
-import { Alert, Button, FestivalShell, Input, Stamp } from "@/components/ui";
+import { PASSWORD_MIN_LENGTH, makeValidators } from "@/lib/validation";
+import { useLang } from "@/components/LanguageProvider";
+import { Alert, Button, FestivalShell, InlineLink, Input, Stamp } from "@/components/ui";
 import { VerifyEmailForm } from "@/components/VerifyEmailForm";
 
 type FieldErrors = {
@@ -19,7 +14,35 @@ type FieldErrors = {
   password?: string;
 };
 
+/** Masthead block: place, wordmark, tagline and the anonymity stamp. */
+function Hero() {
+  const { t } = useLang();
+  return (
+    <div className="flex flex-col gap-4 pt-2">
+      <p className="fest-micro text-[11px] text-fest-cream/70">{t.brand.place}</p>
+      <h1 className="fest-display text-[3.25rem] leading-[0.9] text-fest-cream sm:text-6xl">
+        {t.brand.name}
+      </h1>
+      <p className="fest-micro flex flex-wrap items-center gap-x-2 text-[11px] text-fest-cream/80">
+        {t.brand.tagline.map((word, index) => (
+          <span key={word} className="flex items-center gap-2">
+            {index > 0 && <span className="text-fest-gold">*</span>}
+            {word}
+          </span>
+        ))}
+      </p>
+      <div className="flex items-center gap-4 pt-1">
+        <Stamp top={t.anon.badgeTop} value={t.anon.badgeMid} bottom={t.anon.badgeBottom} />
+        <p className="flex-1 text-sm leading-relaxed text-fest-cream/75">{t.anon.blurb}</p>
+      </div>
+    </div>
+  );
+}
+
 export default function SignupPage() {
+  const { t } = useLang();
+  const v = makeValidators(t);
+
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
@@ -36,9 +59,9 @@ export default function SignupPage() {
     if (submitting) return;
 
     const errors: FieldErrors = {
-      email: validateEmail(email) ?? undefined,
-      phone: validatePhone(phone) ?? undefined,
-      password: validatePassword(password) ?? undefined,
+      email: v.email(email) ?? undefined,
+      phone: v.phone(phone) ?? undefined,
+      password: v.password(password) ?? undefined,
     };
     setFieldErrors(errors);
     if (errors.email || errors.phone || errors.password) return;
@@ -59,17 +82,9 @@ export default function SignupPage() {
   if (pendingEmail) {
     return (
       <FestivalShell
-        title={verified ? "You're in" : "Check your email"}
-        description={
-          verified ? undefined : "Punch in the code we just sent and your account is live."
-        }
-        stamp={
-          verified ? (
-            <Stamp top="Status" value="OK" bottom="verified" tone="gold" />
-          ) : (
-            <Stamp top="Step" value="2" bottom="of 2" tone="gold" />
-          )
-        }
+        eyebrow={verified ? t.eyebrows.done : t.eyebrows.verify}
+        title={verified ? t.verify.verifiedHeading : t.verify.heading}
+        description={verified ? undefined : t.verify.intro}
       >
         <VerifyEmailForm
           initialEmail={pendingEmail}
@@ -82,27 +97,27 @@ export default function SignupPage() {
 
   return (
     <FestivalShell
-      title="Join the lineup"
-      description="Create an account, confirm your email, then tell us how this festival should go down."
-      stamp={<Stamp top="Step" value="1" bottom="of 2" />}
+      hero={<Hero />}
+      eyebrow={t.eyebrows.signup}
+      title={t.signup.heading}
+      description={t.signup.intro}
       footer={
-        <p className="text-center text-sm text-white/70">
-          Already signed up?{" "}
-          <Link href="/verify" className="font-semibold text-fest-gold underline underline-offset-4">
-            Enter your code
-          </Link>
+        <p className="text-center text-sm text-fest-cream/70">
+          {t.signup.haveAccount}{" "}
+          <InlineLink href="/verify">{t.signup.haveAccountLink}</InlineLink>
         </p>
       }
     >
-      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
+      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-6">
         {formError && <Alert tone="error">{formError}</Alert>}
 
         <Input
-          label="Email address"
+          label={t.signup.email}
           name="email"
           type="email"
           inputMode="email"
           autoComplete="email"
+          placeholder={t.signup.emailPlaceholder}
           value={email}
           error={fieldErrors.email}
           disabled={submitting}
@@ -110,12 +125,12 @@ export default function SignupPage() {
         />
 
         <Input
-          label="Phone number"
+          label={t.signup.phone}
           name="phone"
           type="tel"
           inputMode="tel"
           autoComplete="tel"
-          placeholder="+30 691 234 5678"
+          placeholder={t.signup.phonePlaceholder}
           value={phone}
           error={fieldErrors.phone}
           disabled={submitting}
@@ -123,26 +138,23 @@ export default function SignupPage() {
         />
 
         <Input
-          label="Password"
+          label={t.signup.password}
           name="password"
           type="password"
           autoComplete="new-password"
           value={password}
           error={fieldErrors.password}
-          hint={`At least ${PASSWORD_MIN_LENGTH} characters.`}
+          hint={t.signup.passwordHint(PASSWORD_MIN_LENGTH)}
           disabled={submitting}
           onChange={(event) => setPassword(event.target.value)}
         />
 
-        <Button type="submit" loading={submitting}>
-          {submitting ? "Creating" : "Create account"}
-        </Button>
-
-        <p className="text-sm leading-relaxed text-white/70">
-          Your email and phone are only ever stored as one-way hashes — they cannot be read back.
-          They exist purely so each person answers once. Your survey answers are never linked to
-          them.
-        </p>
+        <div className="flex flex-col gap-4">
+          <Button type="submit" loading={submitting}>
+            {submitting ? t.signup.submitting : t.signup.submit}
+          </Button>
+          <p className="text-sm leading-relaxed text-fest-cream/50">{t.signup.privacy}</p>
+        </div>
       </form>
     </FestivalShell>
   );

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
-import { Anton, Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
+import { LanguageProvider } from "@/components/LanguageProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -12,11 +13,13 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// Heavy condensed display face for headlines, in the spirit of the festival poster's headline type.
-const anton = Anton({
-  variable: "--font-anton",
-  weight: "400",
-  subsets: ["latin"],
+// Heavy grotesque for headlines. Inter at 900 rather than a dedicated poster face such as
+// Archivo Black, because those cover Latin only — Greek headings would silently fall back to a
+// different typeface. Inter ships both scripts, so EN and EL headlines are set identically.
+const display = Inter({
+  variable: "--font-archivo-black",
+  weight: ["800", "900"],
+  subsets: ["latin", "greek"],
 });
 
 export const metadata: Metadata = {
@@ -29,9 +32,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${anton.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${display.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <LanguageProvider>{children}</LanguageProvider>
+      </body>
     </html>
   );
 }
