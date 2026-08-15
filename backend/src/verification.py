@@ -19,6 +19,7 @@ import secrets
 
 from sqlalchemy.orm import Session
 
+from src import clock
 from src.auth import PEPPER
 from src.database.models import Account, EmailVerificationCode
 
@@ -50,8 +51,14 @@ class ResendOutcome(str, enum.Enum):
 
 
 def utcnow() -> dt.datetime:
-    """Timezone-naive UTC 'now', matching how MySQL DATETIME columns are stored."""
-    return dt.datetime.now(dt.timezone.utc).replace(tzinfo=None)
+    """'Now' on the application clock, naive, matching how the DATETIME columns are stored.
+
+    The name is historical: the app clock now runs in APP_TIMEZONE (Europe/Athens by default), not
+    UTC. What matters for the code TTL and cooldown maths is only that this is the same clock the
+    stored ``expires_at`` / ``last_sent_at`` were written with, so the differences are correct
+    regardless of the zone. See src/clock.py.
+    """
+    return clock.now()
 
 
 def generate_code() -> str:

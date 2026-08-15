@@ -7,3 +7,6 @@ pwdlib[argon2]
 python-dotenv
 pyjwt
 slowapi
+# Guarantees zoneinfo can resolve APP_TIMEZONE (Europe/Athens) even on a base image that ships no
+# system tzdata — the app clock in src/clock.py depends on it.
+tzdata

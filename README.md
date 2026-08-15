@@ -97,6 +97,106 @@ That endpoint is the one that will also enforce `EVENT_START` (no redeeming befo
 [`docs/qr-redemption.md`](docs/qr-redemption.md) has the full picture: how the credential is
 minted, what has to be configured before going live, and a build plan for the scanning half.
 
+## Admin dashboard
+
+At `/admin/dashboard`. Four pages behind one collapsible aside: **Overview** (platform size,
+accounts-versus-surveys over a rolling window, participation), **Responses** (every answer
+distribution, filterable, with the raw numbers underneath), **Lookup** (search an account by the
+reference on its profile and see its voted / verified / redeemed status — the manual fallback for
+when the door scanner cannot confirm a pass) and **Admins** (who has access, and how to add someone).
+
+### Getting in
+
+There is no admin login. An admin signs in at the ordinary Culture Fest sign-in page with the
+session everything else uses; the only difference is the `role` column on their account.
+
+The first admin has to be made from the server, because creating one through the API requires
+already being one:
+
+```bash
+# sign up and verify the email through the normal flow first, then:
+docker compose exec backend python -m src.scripts.promote_admin you@example.com
+```
+
+After that, admins create each other from the Admins page. The new account is created immediately
+but is inert until its emailed code is entered — same rule as every other account, so a typo in the
+address cannot mint an admin nobody can sign in as.
+
+### How it is hidden
+
+Every `/admin/*` endpoint answers **404**, byte for byte identical to a route that does not exist,
+to anyone who is not a signed-in verified admin — anonymous callers and ordinary signed-in users
+alike. A 401 would confirm the route exists; a 403 would tell a user there is an area they are being
+kept out of.
+
+The check runs on the API, on every endpoint, so calling the paths directly with curl is refused
+exactly the same way. Hiding the frontend route is a courtesy, not the protection. `role` is not a
+field on any request model anywhere in the application, so there is nothing for a user to send in
+order to promote themselves.
+
+### One source of truth for the categories
+
+The dashboard hardcodes no answer options. `src/enums.py` declares them, `SurveyIn` in
+`src/schemas.py` types every categorical field as its enum, and `src/analytics.py` derives the
+filter catalogue by introspecting that model — which `/admin/analytics/schema` serves to the
+frontend. Adding an option to an enum makes it a filter, a bar and a row of stats with no other
+change; it is also, from the same edit, a value the survey API will accept.
+
+Labels are the one thing not derived. They live in `frontend/locales/*.json` under
+`survey.<field>.options.<value>.label` — the survey's own copy, reused, so a category is translated
+once. An option with no locale entry yet renders as its raw value rather than disappearing.
+
+### Time windows
+
+`24h`, `3d` and `7d`, all rolling back from the current server time rather than calendar buckets, so
+the numbers move continuously instead of resetting at midnight. All-time totals are always shown
+alongside, and the Responses page adds an all-time option since the default view of the answers is
+all of them.
+
+Note that "surveys" is counted from submitted responses, never from accounts — an account that
+exists is not a completed survey, and the gap between the two is shown rather than smoothed over.
+
+### Time
+
+Every stored timestamp is **Europe/Athens** local wall-clock time — the festival's own timezone —
+set by one application clock (`backend/src/clock.py`) so records, the rolling-window maths and every
+displayed time all agree. Change it with `APP_TIMEZONE` if the event moves; the test suite pins it to
+UTC for determinism. Timestamps written before this change are UTC and read three hours early until
+they age out.
+
+### Anonymity
+
+Nothing on the dashboard can identify a respondent. `survey_responses` holds no account reference,
+the analytics endpoints return counts rather than rows, and free-text answers (`open_feedback`,
+`accommodation_area`) are excluded from the catalogue entirely — there is nothing to bucket, and
+`accommodation_area` is the one answer the survey itself warns could identify someone. Admin
+accounts are listed as a reference and a date, because a peppered hash is all that is stored.
+
+The Lookup page is the one place account status is shown by reference, but it exposes only the voted
+/ verified / redeemed flags and their timestamps — never the email or phone (only hashes exist), and
+because responses carry no account id, nothing there is tied back to a survey answer.
+
+## Production
+
+`docker-compose.yml` is the **development** stack: it publishes phpMyAdmin and the MySQL port,
+runs the dev servers with live reload, and serves plain HTTP — all fine over a private tailnet, none
+of it safe on a public host. Deploy with the separate production file instead:
+
+```bash
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+It drops phpMyAdmin, gives the database no host port (only the backend reaches it), binds the app
+ports to `127.0.0.1` for a TLS reverse proxy (Caddy, or `tailscale serve`) to front, runs real
+builds, and forces `AUTH_COOKIE_SECURE=true`. Before deploying, set in `backend/.env`:
+
+- strong `SECRET_KEY` / `PEPPER` / DB passwords (`openssl rand -hex 32` for the first two);
+- `ALLOWED_ORIGINS` — the real public origin(s);
+- `TRUSTED_PROXY_IPS` — the reverse proxy's address. The rate limiter keys on the client IP, and
+  behind a proxy every request arrives from the proxy; without this, all callers share one bucket
+  and per-IP brute-force limits stop working. Set it and `X-Forwarded-For` is honoured **only** from
+  that proxy, so no client can spoof the header to dodge a limit.
+
 ## Tests
 
 ```bash

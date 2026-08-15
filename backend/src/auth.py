@@ -12,6 +12,7 @@ from src.database.session import get_db
 from sqlalchemy.orm import Session
 
 from src.database.models import Account
+from src.enums import AccountType
 
 SECRET_KEY: str | None = os.getenv("SECRET_KEY")
 ALGORITHM: str | None = os.getenv("ALGORITHM")
@@ -107,27 +108,29 @@ def clear_session_cookie(response: Response) -> None:
     )
 
 
-def get_session_token(
+def get_optional_session_token(
     request: Request,
     bearer_token: Annotated[str | None, Depends(oauth2_scheme)],
-) -> str:
+) -> str | None:
     """The caller's token, from the Authorization header or, failing that, the session cookie.
 
     Both carry the same kind of token. The header wins when both are present, so an explicit
-    credential always beats an ambient one.
+    credential always beats an ambient one. ``None`` means the caller presented neither.
     """
     if bearer_token:
         return bearer_token
+    return request.cookies.get(AUTH_COOKIE_NAME)
 
-    cookie_token = request.cookies.get(AUTH_COOKIE_NAME)
-    if cookie_token:
-        return cookie_token
 
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Not authenticated",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+def get_session_token(token: Annotated[str | None, Depends(get_optional_session_token)]) -> str:
+    """As above, but a missing credential is a 401 rather than a ``None`` to handle."""
+    if token is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return token
 
 
 def get_current_user(token: Annotated[str, Depends(get_session_token)], db: Annotated[Session, Depends(get_db)]) -> Account:
@@ -169,4 +172,48 @@ def get_current_verified_user(account: Annotated[Account, Depends(get_current_us
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Email address is not verified.",
         )
+    return account
+
+
+def _admin_not_found() -> HTTPException:
+    """The single answer every failed admin check gives.
+
+    Not 401, not 403: a 401 tells an anonymous prober that the route exists and needs a login, and a
+    403 tells a signed-in ordinary user that there is an admin area they are missing. A 404 is what
+    a URL that does not exist returns, so an unauthorised caller learns nothing beyond "no such
+    endpoint" — which is the whole point of masking it.
+
+    The cost is that a genuine admin whose session simply expired also sees a 404. The dashboard
+    frontend handles that by treating it as "not found", and signing in again fixes it.
+    """
+    return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
+
+
+def get_current_admin(
+    token: Annotated[str | None, Depends(get_optional_session_token)],
+    db: Annotated[Session, Depends(get_db)],
+) -> Account:
+    """The signed-in account, but only if it is a verified admin. Anything else is a 404.
+
+    This is authorisation, not a second way to authenticate: the credential is the same session
+    token issued by ``/accounts/login`` and validated by ``get_current_user`` below-the-line here.
+    Admins sign in through the ordinary login endpoint like everybody else, and the only extra
+    condition is the ``role`` column — which no request from a user can write.
+
+    Every admin endpoint depends on this, so protecting the frontend route is not what keeps the
+    data safe; calling the API directly runs exactly this check.
+    """
+    if token is None:
+        raise _admin_not_found()
+
+    try:
+        account = get_current_user(token, db)
+    except HTTPException:
+        # Expired, forged, wrong-scope or pointing at a deleted account — all indistinguishable
+        # from outside.
+        raise _admin_not_found() from None
+
+    if account.email_verified_at is None or account.role != AccountType.ADMIN:
+        raise _admin_not_found()
+
     return account

@@ -304,8 +304,19 @@ function localeTag(lang: string) {
   return lang === "el" ? "el-GR" : "en-GB";
 }
 
+/**
+ * The API's timestamps are naive Europe/Athens wall-clock (see backend src/clock.py), so they are
+ * shown verbatim: parse the naive string as if UTC to lock its components onto the Date, then format
+ * in UTC to read those same components back. `new Date(value)` alone parsed a value with no offset
+ * as the *browser's* local time, which showed the wrong hour on any device not set to Athens.
+ */
+function parseStamp(value: string): Date {
+  return new Date(value.endsWith("Z") ? value : `${value}Z`);
+}
+
 function formatDate(value: string, lang: string): string {
-  return new Date(value).toLocaleDateString(localeTag(lang), {
+  return parseStamp(value).toLocaleDateString(localeTag(lang), {
+    timeZone: "UTC",
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -313,7 +324,8 @@ function formatDate(value: string, lang: string): string {
 }
 
 function formatDateTime(value: string, lang: string): string {
-  return new Date(value).toLocaleString(localeTag(lang), {
+  return parseStamp(value).toLocaleString(localeTag(lang), {
+    timeZone: "UTC",
     day: "numeric",
     month: "short",
     hour: "2-digit",

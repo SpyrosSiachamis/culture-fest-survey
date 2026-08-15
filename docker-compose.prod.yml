@@ -1,0 +1,97 @@
+# Production stack. Use this file, not docker-compose.yml, in production:
+#
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# It is a standalone file rather than an overlay on the dev compose, because the important
+# differences are things an overlay cannot express — the dev file's phpMyAdmin service and its
+# published database port have to be *absent*, and an overlay can only add or override services,
+# never remove them.
+#
+# What this hardens relative to the dev stack:
+#   * no phpMyAdmin — the database admin UI is never exposed in production;
+#   * the database publishes no host port — it is reachable only by the backend over the internal
+#     network, never from outside the host;
+#   * the app ports bind to 127.0.0.1 only, so nothing is served directly on a public interface;
+#     a TLS reverse proxy (Caddy, or `tailscale serve`) is expected to front them;
+#   * production servers — uvicorn without --reload, `next start` on a real build — and no source
+#     bind mounts, so the running code is the built image;
+#   * AUTH_COOKIE_SECURE is forced true, so a session cookie is never issued over plain HTTP.
+#
+# Before deploying, set in backend/.env:
+#   * strong SECRET_KEY / PEPPER / DB_PASSWORD / MYSQL_* (openssl rand -hex 32 for the first two);
+#   * ALLOWED_ORIGINS to the real public origin(s);
+#   * TRUSTED_PROXY_IPS to the reverse proxy's address, so per-IP rate limiting survives the proxy.
+
+services:
+    backend:
+        build:
+            context: ./backend
+            dockerfile: Dockerfile
+        image: culture-fest-backend:prod
+        restart: always
+        depends_on:
+            culture-fest-mysql:
+                condition: service_healthy
+        # 127.0.0.1 only: the reverse proxy (same host) forwards to it; it is never on a public
+        # interface itself.
+        ports:
+            - '127.0.0.1:${BACKEND_PORT:-5000}:5000'
+        env_file:
+            - backend/.env
+        environment:
+            # Guardrail, not a default to be overridden: a production session cookie must carry the
+            # Secure attribute, so it is never sent (or stored) over plain HTTP. TLS is terminated by
+            # the fronting proxy.
+            AUTH_COOKIE_SECURE: 'true'
+        # No --reload, no source mount: the image's baked code and CMD run as-is.
+        networks:
+            - app-network
+
+    frontend:
+        build:
+            context: ./frontend
+            dockerfile: Dockerfile.prod
+            args:
+                # Inlined into the browser bundle at build time — must be the API URL as reached
+                # from the visitor's browser. Mirror it from the environment so it is set in one
+                # place; see frontend/.env.example.
+                NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        image: culture-fest-frontend:prod
+        restart: always
+        ports:
+            - '127.0.0.1:${FRONTEND_PORT:-3000}:3000'
+        depends_on:
+            - backend
+        networks:
+            - app-network
+
+    culture-fest-mysql:
+        image: mysql:8.0
+        container_name: culture-fest-mysql-prod
+        restart: always
+        environment:
+            MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+            MYSQL_DATABASE: ${MYSQL_DATABASE}
+            MYSQL_USER: ${MYSQL_USER}
+            MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+        # Deliberately no `ports:` — the database is reachable only by the backend over app-network.
+        # Nothing outside the compose network can connect to it.
+        volumes:
+            - mysql_data_prod:/var/lib/mysql
+        networks:
+            - app-network
+        healthcheck:
+            test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}" ]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+            start_period: 30s
+
+    # No phpMyAdmin service in production, on purpose.
+
+volumes:
+    mysql_data_prod:
+
+networks:
+    app-network:
+        driver: bridge

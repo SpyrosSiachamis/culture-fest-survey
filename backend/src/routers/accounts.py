@@ -1,5 +1,4 @@
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response
-from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from starlette import status
 import datetime as dt
@@ -26,7 +25,6 @@ from src.auth import (
     DUMMY_HASH,
     clear_session_cookie,
     create_access_token,
-    get_current_user,
     get_current_verified_user,
     get_password_hash,
     hash_identifier,
@@ -68,13 +66,6 @@ def _verification_error(http_status: int, outcome: VerificationOutcome, message:
         detail={"status": outcome.value, "message": message},
     )
 
-
-@router.get('/')
-def test_endpoint():
-    return JSONResponse(
-        status_code=status.HTTP_200_OK,
-        content={"message": "Accounts returned"}
-    )
 
 @router.post('/signup', response_model=SignupAccepted, status_code=status.HTTP_202_ACCEPTED)
 @limiter.limit("5/minute")
@@ -330,5 +321,8 @@ def read_redemption_status(account: Account = Depends(get_current_verified_user)
 
 
 @router.get("/me/has-voted", response_model=bool)
-def has_voted(request: Request, account: Account = Depends(get_current_user)):
+def has_voted(account: Account = Depends(get_current_verified_user)):
+    # Verified, like the sibling /me endpoints: an unverified account cannot vote in the first
+    # place, so it has no meaningful answer here, and using the same guard keeps every /me route on
+    # one authorisation rule rather than a subtly weaker one for this one.
     return account.has_voted
