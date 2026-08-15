@@ -7,7 +7,9 @@ from slowapi.errors import RateLimitExceeded
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from src.database.session import Base, engine
 from src.database import models  # noqa: F401 — registers models on Base
+from src.auth import AUTH_COOKIE_SECURE
 from src.database.schema_patch import ensure_columns
+from src.middleware import MaxBodySizeMiddleware, SecurityHeadersMiddleware
 from src.rate_limit import limiter
 from src.routers import accounts
 from src.routers import admin
@@ -62,6 +64,19 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Cap the request body. Every endpoint takes a small JSON object — the largest is a survey, a few
+# kilobytes even with the 1000-char feedback field full — so 64 KiB is generous headroom while still
+# refusing the multi-megabyte bodies that would otherwise be read into memory before validation ever
+# runs. Override with MAX_REQUEST_BODY_BYTES if a future endpoint needs more. A production reverse
+# proxy should cap body size too; this is the guarantee that holds even when one is not in front.
+_max_body_bytes = int(os.getenv("MAX_REQUEST_BODY_BYTES", str(64 * 1024)))
+app.add_middleware(MaxBodySizeMiddleware, max_bytes=_max_body_bytes)
+
+# Baseline response headers, added outermost so they cover every response including errors and CORS
+# replies. HSTS is tied to AUTH_COOKIE_SECURE: both track "this deployment is served over HTTPS",
+# so a plain-HTTP dev stack asserts neither and an HTTPS production one asserts both.
+app.add_middleware(SecurityHeadersMiddleware, hsts=AUTH_COOKIE_SECURE)
 
 Base.metadata.create_all(bind=engine)
 # create_all() adds missing tables but never alters existing ones, so columns added to a model that
