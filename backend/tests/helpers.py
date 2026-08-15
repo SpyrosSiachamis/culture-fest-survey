@@ -14,16 +14,18 @@ VALID_SIGNUP = {
 }
 
 # A complete, valid survey body for the "local" audience (no conditional fields required).
+# Every categorical value here has to be a member of the matching enum in src/enums.py — the API
+# validates against those, and the analytics counts against the same list.
 SURVEY_PAYLOAD = {
     "audience_type": "local",
     "gender": "other",
-    "age_range": "25-34",
+    "age_range": "25-29",
     "interest_level": 8,
     "recommend_likelihood": 9,
     "ticket_price_range": "10-20",
-    "genre_preferences": ["rock", "folk"],
-    "date_preference": "weekend",
-    "start_time_preference": "evening",
+    "genre_preferences": ["rock", "laiko"],
+    "date_preference": "weekend-only",
+    "start_time_preference": "21:00",
     "group_size": "2-3",
     "food_stall_interest": True,
     "alcohol_preference": "beer",

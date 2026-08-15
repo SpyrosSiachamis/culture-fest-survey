@@ -1,16 +1,23 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import logging
 import os
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from src.database.session import Base, engine
 from src.database import models  # noqa: F401 — registers models on Base
+from src.auth import AUTH_COOKIE_SECURE
 from src.database.schema_patch import ensure_columns
+from src.middleware import MaxBodySizeMiddleware, SecurityHeadersMiddleware
 from src.rate_limit import limiter
 from src.routers import accounts
+from src.routers import admin
 from src.routers import surveys
 
 #TODO: Drop the database when testing is done, or use a separate test database. This is just for development purposes.
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
@@ -18,6 +25,32 @@ app = FastAPI()
 # the routers do nothing at all without these two lines.
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# --- Client IP behind a reverse proxy -------------------------------------------------------------
+# The rate limiter keys on request.client.host. Directly exposed that is the real client, which is
+# what we want. But behind a reverse proxy (the documented production path — Caddy / `tailscale
+# serve`) every request arrives from the proxy, so without this every user would share one
+# rate-limit bucket: one abuser could trip the login/verify/submit limits for everyone, and the
+# per-IP brute-force and enumeration protections would stop being per-IP.
+#
+# ProxyHeadersMiddleware rewrites request.client from X-Forwarded-For, but ONLY when the immediate
+# peer is one of TRUSTED_PROXY_IPS. An arbitrary client cannot spoof the header to forge or evade a
+# limit, because its own connection address is not trusted. Unset (the default, and the dev stack)
+# means no proxy is trusted and X-Forwarded-For is ignored entirely — correct for direct exposure.
+#
+# Set it to the proxy's address(es) in production, e.g. TRUSTED_PROXY_IPS=127.0.0.1 when the proxy
+# runs on the same host. Never set it to "*" on a publicly reachable backend: that would trust
+# X-Forwarded-For from anyone and hand every caller a spoofable rate-limit key.
+_trusted_proxy_ips = [
+    ip.strip() for ip in os.getenv("TRUSTED_PROXY_IPS", "").split(",") if ip.strip()
+]
+if _trusted_proxy_ips:
+    if "*" in _trusted_proxy_ips:
+        logger.warning(
+            "TRUSTED_PROXY_IPS is '*': X-Forwarded-For will be trusted from ANY peer, which makes "
+            "the rate-limit key spoofable. Set it to the reverse proxy's address instead."
+        )
+    app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=_trusted_proxy_ips)
 
 _allowed_origins = [
     origin.strip()
@@ -31,6 +64,19 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Cap the request body. Every endpoint takes a small JSON object — the largest is a survey, a few
+# kilobytes even with the 1000-char feedback field full — so 64 KiB is generous headroom while still
+# refusing the multi-megabyte bodies that would otherwise be read into memory before validation ever
+# runs. Override with MAX_REQUEST_BODY_BYTES if a future endpoint needs more. A production reverse
+# proxy should cap body size too; this is the guarantee that holds even when one is not in front.
+_max_body_bytes = int(os.getenv("MAX_REQUEST_BODY_BYTES", str(64 * 1024)))
+app.add_middleware(MaxBodySizeMiddleware, max_bytes=_max_body_bytes)
+
+# Baseline response headers, added outermost so they cover every response including errors and CORS
+# replies. HSTS is tied to AUTH_COOKIE_SECURE: both track "this deployment is served over HTTPS",
+# so a plain-HTTP dev stack asserts neither and an HTTPS production one asserts both.
+app.add_middleware(SecurityHeadersMiddleware, hsts=AUTH_COOKIE_SECURE)
 
 Base.metadata.create_all(bind=engine)
 # create_all() adds missing tables but never alters existing ones, so columns added to a model that
@@ -46,3 +92,4 @@ def root():
 
 app.include_router(accounts.router)
 app.include_router(surveys.router)
+app.include_router(admin.router)

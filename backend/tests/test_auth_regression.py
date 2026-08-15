@@ -105,6 +105,27 @@ def test_survey_submission_still_works_end_to_end(client, sent_emails):
     assert duplicate.status_code == 409
 
 
+def test_a_rejected_resubmission_writes_no_second_response(client, sent_emails, db_session):
+    """The anti-revote guard is an atomic conditional UPDATE, not a read-then-write.
+
+    A duplicate submission must be turned away *and* leave no trace: the guarded UPDATE matches zero
+    rows the second time, so the handler rolls back before inserting. If it ever regressed to
+    checking a flag and then writing regardless, this would catch the extra row even though the
+    single-threaded test client cannot reproduce the underlying race directly.
+    """
+    from src.database.models import SurveyResponse
+
+    token, _payload = _verified_login(client, sent_emails)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    assert client.post("/surveys/submit", json=SURVEY_PAYLOAD, headers=headers).status_code == 201
+    assert client.post("/surveys/submit", json=SURVEY_PAYLOAD, headers=headers).status_code == 409
+    assert client.post("/surveys/submit", json=SURVEY_PAYLOAD, headers=headers).status_code == 409
+
+    # Exactly one row, however many times submit was called.
+    assert db_session.query(SurveyResponse).count() == 1
+
+
 def test_survey_validation_is_unchanged(client, sent_emails):
     token, _payload = _verified_login(client, sent_emails)
 
@@ -122,6 +143,47 @@ def test_health_endpoint_still_responds(client):
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
+
+
+def test_has_voted_requires_a_verified_account(client, sent_emails, db_session):
+    """The endpoint uses the same verified-user guard as the other /me routes, not a weaker one.
+
+    An account that has signed up but not verified can hold a valid session token (verification and
+    login are separate steps), so a token alone must not be enough here.
+    """
+    _code, payload = signup(client, sent_emails)
+    account = get_account(db_session, payload["email"])
+    token = create_access_token(account.id, dt.timedelta(minutes=5))
+
+    response = client.get(
+        "/accounts/me/has-voted", headers={"Authorization": f"Bearer {token}"}
+    )
+
+    assert response.status_code == 403
+
+
+def test_responses_carry_baseline_security_headers(client):
+    response = client.get("/health")
+
+    assert response.headers["x-content-type-options"] == "nosniff"
+    assert response.headers["x-frame-options"] == "DENY"
+    assert response.headers["referrer-policy"] == "no-referrer"
+    # HSTS is only asserted when the deployment serves HTTPS; the test config does not.
+    assert "strict-transport-security" not in response.headers
+
+
+def test_oversized_request_body_is_rejected(client):
+    """A body over the cap is refused with 413 before it is parsed."""
+    huge = "A" * (128 * 1024)
+    response = client.post(
+        "/accounts/login", json={"email": "a@example.com", "password": huge}
+    )
+
+    assert response.status_code == 413
+
+
+def test_removed_debug_endpoint_is_gone(client):
+    assert client.get("/accounts/").status_code == 404
 
 
 def test_unique_phone_constraint_still_applies(client, sent_emails, db_session):
