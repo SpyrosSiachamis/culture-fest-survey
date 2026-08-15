@@ -1,4 +1,4 @@
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from starlette import status
@@ -10,6 +10,9 @@ from src.rate_limit import limiter
 from src.schemas import (
     AccountCreate,
     AccountRead,
+    ProfileRead,
+    RedemptionRead,
+    RedemptionStatusRead,
     ResendAccepted,
     ResendCodeRequest,
     SignupAccepted,
@@ -17,7 +20,20 @@ from src.schemas import (
     VerificationResponse,
     VerifyEmailRequest,
 )
-from src.auth import ACCESS_TOKEN_EXPIRE_MINUTES, DUMMY_HASH, create_access_token, get_current_user, verify_password, get_password_hash, hash_identifier
+from src.auth import (
+    ACCESS_TOKEN_EXPIRE_MINUTES,
+    AUTH_COOKIE_NAME,
+    DUMMY_HASH,
+    clear_session_cookie,
+    create_access_token,
+    get_current_user,
+    get_current_verified_user,
+    get_password_hash,
+    hash_identifier,
+    set_session_cookie,
+    verify_password,
+)
+from src.redemption import create_redemption_token
 from src.schemas import LoginRequest
 from src.verification import (
     CODE_TTL_MINUTES,
@@ -208,7 +224,12 @@ def resend_verification_code(
 
 @router.post("/login", response_model=Token)
 @limiter.limit("10/minute")
-def login(request: Request, credentials: LoginRequest, db: Session = Depends(get_db)):
+def login(
+    request: Request,
+    response: Response,
+    credentials: LoginRequest,
+    db: Session = Depends(get_db),
+):
     identifier_hash = hash_identifier(credentials.email)
     account = db.query(Account).filter(Account.email_hash == identifier_hash).first()
 
@@ -232,7 +253,81 @@ def login(request: Request, credentials: LoginRequest, db: Session = Depends(get
 
     token_expiry = dt.timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     token = create_access_token(account.id, token_expiry)
+
+    # The browser gets the token as an HttpOnly cookie, which is what lets the session survive a
+    # page reload. It is also returned in the body, unchanged, for non-browser clients.
+    set_session_cookie(response, token)
+
     return Token(access_token=token, token_type="bearer")
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+def logout(response: Response):
+    """End the browser session by deleting the cookie that carries it.
+
+    Unauthenticated on purpose: signing out has to work even when the token has already expired,
+    and all this can ever do is clear the caller's own cookie.
+
+    The token itself is a stateless JWT, so a copy captured elsewhere stays valid until it expires.
+    Killing it earlier would need a server-side denylist — worth adding if sessions ever get long,
+    but out of scope for a 12-hour token that the browser can no longer read.
+    """
+    clear_session_cookie(response)
+
+
+@router.get("/me", response_model=ProfileRead)
+def read_profile(
+    request: Request,
+    response: Response,
+    account: Account = Depends(get_current_verified_user),
+):
+    """The signed-in account's own profile.
+
+    The account is resolved from the session token and from nothing else. There is no id in the
+    path, the query string or the body, so there is no id for a caller to tamper with — asking for
+    somebody else's profile is not a request this API can express.
+    """
+    if not account.allowed_to_redeem:
+        redemption = RedemptionRead(status="not_eligible")
+    elif account.has_redeemed:
+        # Claimed already: no credential is issued at all, rather than one the page is trusted to
+        # hide. There is nothing here that could be replayed at the door.
+        redemption = RedemptionRead(status="redeemed", redeemed_at=account.redeemed_at)
+    else:
+        redemption = RedemptionRead(status="ready", token=create_redemption_token(account))
+
+    # Rolling session: an active user's cookie is renewed on every visit, so someone who keeps
+    # using the app is not signed out mid-festival. Only for cookie callers — a bearer client
+    # manages its own token.
+    if AUTH_COOKIE_NAME in request.cookies:
+        set_session_cookie(
+            response,
+            create_access_token(account.id, dt.timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)),
+        )
+
+    return ProfileRead(
+        reference=account.id.split("-")[0].upper(),
+        email_verified=account.email_verified_at is not None,
+        email_verified_at=account.email_verified_at,
+        has_voted=account.has_voted,
+        created_at=account.created_at,
+        redemption=redemption,
+    )
+
+
+@router.get("/me/redemption-status", response_model=RedemptionStatusRead)
+def read_redemption_status(account: Account = Depends(get_current_verified_user)):
+    """Whether this account's benefit has been claimed, and when.
+
+    The fallback for a scan whose confirmation never appeared on the staff device: the visitor can
+    check on their own phone, signed in as themselves, instead of being turned away or handed a
+    second bracelet. Same authorisation as the profile — the session decides whose status this is.
+    """
+    return RedemptionStatusRead(
+        has_redeemed=account.has_redeemed,
+        redeemed_at=account.redeemed_at,
+    )
+
 
 @router.get("/me/has-voted", response_model=bool)
 def has_voted(request: Request, account: Account = Depends(get_current_user)):

@@ -21,10 +21,18 @@ def submit_survey(
 ):
     if account.has_voted:
         raise HTTPException(status_code=409, detail="Account has already submitted a survey.")
+
     account.has_voted = True
-    db.commit()
+    # Submitting is what earns the benefit at the door. The claim starts unused, and the QR token
+    # behind it is minted lazily the first time the profile is opened, so an account that never
+    # looks at its pass never has a credential sitting in the database.
+    account.allowed_to_redeem = True
+    account.has_redeemed = False
+
     response = SurveyResponse(**payload.model_dump())
     db.add(response)
+    # One commit for both: the flag on the account and the anonymous response row land together, so
+    # a failure cannot leave an account marked as voted with no response stored (or the reverse).
     db.commit()
     return {"message": "Survey submitted successfully."}
 

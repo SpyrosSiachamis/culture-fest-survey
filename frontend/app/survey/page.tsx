@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { errorMessage, isApiError, submitSurvey } from "@/lib/api";
-import { getAccessToken } from "@/lib/session";
 import {
   buildPayload,
   questionsFor,
@@ -13,6 +12,7 @@ import {
   type AudienceType,
   type Question,
 } from "@/lib/survey";
+import { useAuth } from "@/components/AuthProvider";
 import { useLang } from "@/components/LanguageProvider";
 import { questionCopy, type Dictionary } from "@/lib/i18n";
 import { ChoiceCard } from "../components/ChoiceCard";
@@ -47,6 +47,7 @@ function Shell({ children }: { children: React.ReactNode }) {
  */
 export default function SurveyPage() {
   const { t } = useLang();
+  const { status, initialising, refresh } = useAuth();
   const [answers, setAnswers] = useState<Answers>({});
   const [index, setIndex] = useState(0);
   const [submitting, setSubmitting] = useState(false);
@@ -95,10 +96,13 @@ export default function SurveyPage() {
     try {
       await submitSurvey(buildPayload(answers));
       setSubmitted(true);
+      // Submitting is what earns the door pass, so the cached profile is now stale.
+      void refresh();
     } catch (caught) {
       // "Already submitted" is a finished state, not a failure to retry.
       if (isApiError(caught) && caught.status === "already_submitted") {
         setSubmitted(true);
+        void refresh();
         return;
       }
       setError(errorMessage(caught));
@@ -107,9 +111,26 @@ export default function SurveyPage() {
     }
   }
 
-  // Submission needs a bearer token, so there is no point letting someone fill in fifteen screens
-  // and only then discover they are signed out.
-  if (!getAccessToken() && !submitted) {
+  // Wait for the session check before deciding anything. Without this, a reload mid-survey would
+  // show the sign-in gate for a moment to someone who is perfectly well signed in.
+  if (initialising && !submitted) {
+    return (
+      <Shell>
+        <div className="mx-auto flex min-h-dvh w-full max-w-lg items-center px-5 py-10">
+          <GlassCard className="w-full">
+            <div className="flex flex-col gap-3" aria-label={t.common.loading}>
+              <div className="h-8 w-2/3 animate-pulse bg-bone/12" />
+              <div className="h-4 w-full animate-pulse bg-bone/8" />
+            </div>
+          </GlassCard>
+        </div>
+      </Shell>
+    );
+  }
+
+  // Submission requires a live session, so there is no point letting someone fill in fifteen
+  // screens and only then discover they are signed out.
+  if (status !== "authenticated" && !submitted) {
     return (
       <Shell>
         <div className="mx-auto flex min-h-dvh w-full max-w-lg items-center px-5 py-10">
@@ -150,6 +171,9 @@ export default function SurveyPage() {
                 <p className="mt-3 text-sm text-bone/70">{t.done.body}</p>
               </div>
               <Notice tone="success">{t.done.confirmation}</Notice>
+              <Link href="/profile" className="w-full">
+                <PrimaryButton type="button">{t.common.profile}</PrimaryButton>
+              </Link>
             </div>
           </GlassCard>
         </div>

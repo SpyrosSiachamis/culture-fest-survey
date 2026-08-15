@@ -37,6 +37,33 @@ class Account(Base):
     # itself, expiry, attempt counters) lives in EmailVerificationCode below.
     email_verified_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True, default=None)
 
+    # --- Door redemption -----------------------------------------------------------------------
+    # Three columns that together form the whole state machine for claiming the benefit at the
+    # door. They deliberately say nothing about *what* was answered — only that this account has
+    # earned a claim, and whether the claim has been used:
+    #
+    #   new account            allowed_to_redeem = False, has_redeemed = False
+    #   after survey submit    allowed_to_redeem = True,  has_redeemed = False
+    #   after the door scan    allowed_to_redeem = True,  has_redeemed = True
+    #
+    # has_voted already records eligibility, but it is the *voting* flag: keeping redemption on its
+    # own column means a future reset of one does not silently reset the other.
+    #
+    # Like has_voted, these are facts about the account and nothing else. Nothing here is written
+    # to survey_responses and nothing in survey_responses points back here, so the anonymity of the
+    # answers is untouched by any of it.
+    allowed_to_redeem: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+    has_redeemed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+    # Stamped by the door scan, alongside has_redeemed. The user-facing redemption-status page
+    # shows it back so somebody whose scan appeared to fail can confirm what actually happened.
+    redeemed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True, default=None)
+
+    # Note: the QR credential itself is deliberately NOT a column. It is a short-lived signed JWT
+    # minted on demand from what is already here (see src/redemption.py), so there is no extra
+    # secret at rest and nothing to leak from a database dump.
+
 
 # One row per account with a verification code in flight. The plaintext code is NEVER stored:
 # only an HMAC-SHA256 digest keyed with the server-side PEPPER (see src/verification.py). A bare

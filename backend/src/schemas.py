@@ -33,6 +33,50 @@ class AccountRead(pydantic.BaseModel):
     has_voted: bool
     created_at: dt.datetime
 
+class RedemptionRead(pydantic.BaseModel):
+    """The door-benefit half of the profile.
+
+    `status` is derived server-side from the two account flags, so the frontend never has to
+    combine them itself (and cannot get the combination wrong):
+
+        not_eligible  no survey submitted yet — there is no QR code to show
+        ready         eligible and unclaimed — `qr_data_uri` is present
+        redeemed      already claimed at the door — the QR is withheld
+    """
+    status: t.Literal["not_eligible", "ready", "redeemed"]
+    # The signed value the browser draws as a QR code. Only ever populated for `ready`: an
+    # ineligible or already-claimed account is sent no credential at all, rather than one the page
+    # is trusted to keep hidden.
+    token: t.Optional[str] = None
+    redeemed_at: t.Optional[dt.datetime] = None
+
+
+class RedemptionStatusRead(pydantic.BaseModel):
+    """The narrow fallback view, for when the door scanner's own screen fails to confirm a scan.
+
+    Deliberately smaller than the profile: whether the benefit has been claimed, and when. Nothing
+    else, and no QR code.
+    """
+    has_redeemed: bool
+    redeemed_at: t.Optional[dt.datetime]
+
+
+class ProfileRead(pydantic.BaseModel):
+    """Everything the profile page is allowed to know about the signed-in account.
+
+    Note what is *not* here: no email or phone (the database only ever holds one-way hashes of
+    those, so they cannot be returned even in principle), no password hash and no role.
+    """
+    # First segment of the account id: enough for a human to quote at the door or to support,
+    # without handing out the primary key.
+    reference: str
+    email_verified: bool
+    email_verified_at: t.Optional[dt.datetime]
+    has_voted: bool
+    created_at: dt.datetime
+    redemption: RedemptionRead
+
+
 class SignupAccepted(pydantic.BaseModel):
     """Deliberately says nothing about whether the account is new, existing or verified."""
     message: str

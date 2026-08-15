@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Archivo, Archivo_Black, Geist, Geist_Mono, Noto_Sans_Display } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from "@/components/AuthProvider";
 import { LanguageProvider } from "@/components/LanguageProvider";
 
 const geistSans = Geist({
@@ -53,7 +54,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} ${archivo.variable} ${archivoBlack.variable} ${notoDisplay.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <LanguageProvider>{children}</LanguageProvider>
+        <LanguageProvider>
+          <AuthProvider>{children}</AuthProvider>
+        </LanguageProvider>
       </body>
     </html>
   );

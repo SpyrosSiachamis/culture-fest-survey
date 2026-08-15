@@ -4,16 +4,17 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { errorMessage, isApiError, login } from "@/lib/api";
-import { setAccessToken } from "@/lib/session";
 import { makeValidators } from "@/lib/validation";
+import { useAuth } from "@/components/AuthProvider";
 import { useLang } from "@/components/LanguageProvider";
 import { SplitLayout } from "./components/SplitLayout";
 import { Field, Notice } from "./components/Field";
-import { PrimaryButton } from "./components/PrimaryButton";
+import { PrimaryButton, GhostButton } from "./components/PrimaryButton";
 
 /** Sign-in is the front door: `/` renders it directly, and `/login` redirects here. */
 export default function HomePage() {
   const { t } = useLang();
+  const { profile, status, initialising, refresh } = useAuth();
   const v = makeValidators(t);
 
   const [email, setEmail] = useState("");
@@ -21,7 +22,10 @@ export default function HomePage() {
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
   const [error, setError] = useState<{ status: string; message: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [signedIn, setSignedIn] = useState(false);
+
+  // Signed in either because the form was just submitted, or because the session restored itself
+  // from the cookie when the page loaded — a refresh lands here, not back on the form.
+  const signedIn = status === "authenticated";
 
   // The backend answers 403 with this status when the password was right but the address was
   // never confirmed — the one case where we can safely point the user somewhere specific.
@@ -42,9 +46,10 @@ export default function HomePage() {
     setError(null);
 
     try {
-      const response = await login({ email: email.trim(), password });
-      setAccessToken(response.access_token);
-      setSignedIn(true);
+      // The session cookie is set by this call; `refresh` then reads back who the cookie says we
+      // are, so the signed-in state comes from the server rather than from having posted a form.
+      await login({ email: email.trim(), password });
+      await refresh();
     } catch (caught) {
       setError({
         status: isApiError(caught) ? caught.status : "error",
@@ -56,14 +61,40 @@ export default function HomePage() {
   }
 
   if (signedIn) {
+    // Someone who has already answered has nothing to start, so the pass is the main action.
+    const surveyDone = profile?.has_voted ?? false;
+
     return (
       <SplitLayout>
         <p className="ticker text-[10px] text-gold">{t.eyebrows.done}</p>
         <h2 className="display mt-3 text-4xl text-bone">{t.login.signedInHeading}</h2>
-        <p className="mt-3 text-sm text-bone/65">{t.login.signedInBody}</p>
-        <Link href="/survey" className="mt-8 block">
-          <PrimaryButton type="button">{t.login.startSurvey}</PrimaryButton>
+        <p className="mt-3 text-sm text-bone/65">
+          {surveyDone ? t.done.body : t.login.signedInBody}
+        </p>
+        <Link href={surveyDone ? "/profile" : "/survey"} className="mt-8 block">
+          <PrimaryButton type="button">
+            {surveyDone ? t.common.profile : t.login.startSurvey}
+          </PrimaryButton>
         </Link>
+        <Link href={surveyDone ? "/survey" : "/profile"} className="mt-3 block text-center">
+          <GhostButton type="button" className="w-full">
+            {surveyDone ? t.profile.backToSurvey : t.common.profile}
+          </GhostButton>
+        </Link>
+      </SplitLayout>
+    );
+  }
+
+  // Nothing is known about the session yet. Rendering the form here would flash a sign-in screen
+  // at somebody who is already signed in, every single reload.
+  if (initialising) {
+    return (
+      <SplitLayout>
+        <p className="ticker text-[10px] text-gold">{t.eyebrows.login}</p>
+        <div className="mt-5 flex flex-col gap-3" aria-label={t.common.loading}>
+          <div className="h-8 w-2/3 animate-pulse bg-bone/12" />
+          <div className="h-4 w-full animate-pulse bg-bone/8" />
+        </div>
       </SplitLayout>
     );
   }
