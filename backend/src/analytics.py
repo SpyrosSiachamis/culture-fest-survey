@@ -26,6 +26,7 @@ from annotated_types import Ge, Le
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from src import clock
 from src.database.models import Account, SurveyResponse
 from src.enums import AccountType
 from src.schemas import SurveyIn
@@ -52,13 +53,15 @@ _BUCKETS: dict[str, int] = {
 
 
 def now() -> dt.datetime:
-    """Current server time, naive UTC.
+    """Current time on the application clock, naive.
 
-    Naive on purpose: ``created_at`` and ``submitted_at`` are written by the database's own ``NOW()``
-    into columns with no timezone, so comparisons have to be made in the same terms. This assumes the
-    database session runs on UTC, which the MySQL container does.
+    The whole point of routing this through :func:`src.clock.now` is that the rolling windows are
+    compared against the same clock the ``created_at`` / ``submitted_at`` values were stamped with.
+    Read "now" from a different zone than the stored timestamps and every window would be offset by
+    the gap between them — which is exactly the error that a bare ``datetime.utcnow()`` here would
+    reintroduce now that the columns hold Europe/Athens local time.
     """
-    return dt.datetime.now(dt.timezone.utc).replace(tzinfo=None)
+    return clock.now()
 
 
 def window_start(window: str, reference: dt.datetime) -> dt.datetime:

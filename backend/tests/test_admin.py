@@ -22,6 +22,7 @@ ADMIN_ROUTES = [
     ("GET", "/admin/accounts"),
     ("POST", "/admin/accounts"),
     ("POST", "/admin/accounts/promote"),
+    ("GET", "/admin/accounts/lookup?reference=abcd"),
 ]
 
 NEW_ADMIN = {
@@ -437,6 +438,99 @@ def test_promotion_creates_no_account(client, sent_emails, db_session):
     client.post("/admin/accounts/promote", json={"email": "nobody@example.com"})
 
     assert db_session.query(Account).count() == before
+
+
+# --- Account lookup (the redemption fallback) -----------------------------------------------------
+
+
+def test_lookup_finds_an_account_by_its_full_reference(client, sent_emails, db_session):
+    _signed_in_admin(client, sent_emails, db_session)
+    target = _verified_account(client, sent_emails, email="finder@example.com", phone="+306955550000")
+    account = get_account(db_session, target["email"])
+    assert account is not None
+    account.has_voted = True
+    account.allowed_to_redeem = True
+    account.has_redeemed = True
+    account.redeemed_at = account.created_at
+    db_session.commit()
+
+    reference = account.id.split("-")[0]
+    body = client.get(f"/admin/accounts/lookup?reference={reference}").json()
+
+    assert body["count"] == 1
+    hit = body["results"][0]
+    assert hit["account_id"] == account.id
+    assert hit["reference"] == reference.upper()
+    assert hit["has_voted"] is True
+    assert hit["email_verified"] is True
+    assert hit["has_redeemed"] is True
+    assert hit["redeemed_at"] is not None
+
+
+def test_lookup_is_case_insensitive_like_the_displayed_reference(client, sent_emails, db_session):
+    """The profile shows the reference upper-cased; searching with it must still hit the row."""
+    _signed_in_admin(client, sent_emails, db_session)
+    target = _verified_account(client, sent_emails, email="caps@example.com", phone="+306955551111")
+    account = get_account(db_session, target["email"])
+    assert account is not None
+
+    displayed = account.id.split("-")[0].upper()
+    body = client.get(f"/admin/accounts/lookup?reference={displayed}").json()
+
+    assert [r["account_id"] for r in body["results"]] == [account.id]
+
+
+def test_lookup_matches_a_prefix(client, sent_emails, db_session):
+    _signed_in_admin(client, sent_emails, db_session)
+    target = _verified_account(client, sent_emails, email="prefix@example.com", phone="+306955552222")
+    account = get_account(db_session, target["email"])
+    assert account is not None
+
+    prefix = account.id[:4]
+    body = client.get(f"/admin/accounts/lookup?reference={prefix}").json()
+
+    assert account.id in [r["account_id"] for r in body["results"]]
+    assert all(r["account_id"].startswith(prefix.lower()) for r in body["results"])
+
+
+def test_lookup_rejects_a_too_short_term(client, sent_emails, db_session):
+    """One character (or none) is refused, so a stray keystroke does not pull the whole table."""
+    _signed_in_admin(client, sent_emails, db_session)
+
+    assert client.get("/admin/accounts/lookup?reference=a").status_code == 422
+    assert client.get("/admin/accounts/lookup?reference=").status_code == 422
+
+
+def test_lookup_rejects_like_wildcards_and_injection(client, sent_emails, db_session):
+    """The term is validated to hex+dashes, so LIKE wildcards and SQL metacharacters never reach the
+    query — a '%' would otherwise match everything, and quotes could probe for injection."""
+    _signed_in_admin(client, sent_emails, db_session)
+
+    for bad in ["%25", "5%25", "a_b", "a'b", "a;b", "a b"]:
+        assert client.get(f"/admin/accounts/lookup?reference={bad}").status_code == 422
+
+
+def test_lookup_exposes_no_hashes(client, sent_emails, db_session):
+    _signed_in_admin(client, sent_emails, db_session)
+    target = _verified_account(client, sent_emails, email="clean@example.com", phone="+306955553333")
+    account = get_account(db_session, target["email"])
+    assert account is not None
+
+    text = client.get(f"/admin/accounts/lookup?reference={account.id[:8]}").text
+
+    assert "email_hash" not in text
+    assert "phone_hash" not in text
+    assert "hashed_password" not in text
+
+
+def test_lookup_reports_no_match_without_erroring(client, sent_emails, db_session):
+    _signed_in_admin(client, sent_emails, db_session)
+
+    body = client.get("/admin/accounts/lookup?reference=ffffffff").json()
+
+    assert body["count"] == 0
+    assert body["truncated"] is False
+    assert body["results"] == []
 
 
 # --- The catalogue is derived, not written down ---------------------------------------------------

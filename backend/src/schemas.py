@@ -219,6 +219,33 @@ class AdminPromoted(pydantic.BaseModel):
     message: str
 
 
+class AccountLookupRead(pydantic.BaseModel):
+    """One account matched by reference, seen through the staff redemption-fallback lens.
+
+    Only status flags and their timestamps — no email or phone (there is nothing but a hash to
+    return anyway), and nothing that ties the account to a survey response, because the responses
+    carry no account id in the first place. This says whether *this account* voted, verified and
+    redeemed, which is exactly what the door needs when the scanner cannot confirm it.
+    """
+    account_id: str
+    reference: str
+    email_verified: bool
+    email_verified_at: t.Optional[dt.datetime]
+    has_voted: bool
+    has_redeemed: bool
+    redeemed_at: t.Optional[dt.datetime]
+    created_at: dt.datetime
+
+
+class AccountLookupResults(pydantic.BaseModel):
+    query: str
+    # How many matched and were returned. Capped — a short reference prefix can match a lot of
+    # accounts — so `truncated` says whether there were more than this beyond the cap.
+    count: int
+    truncated: bool
+    results: t.List[AccountLookupRead]
+
+
 class AnalyticsFieldRead(pydantic.BaseModel):
     """One survey question, described well enough for the frontend to build its own controls.
 

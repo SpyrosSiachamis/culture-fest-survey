@@ -10,6 +10,8 @@ carry the same session token; the only difference is the ``role`` column, which 
 send is able to write.
 """
 
+import re
+
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from starlette import status
@@ -22,6 +24,8 @@ from src.email_service import send_verification_email
 from src.enums import AccountType
 from src.schemas import (
     AccountCreate,
+    AccountLookupRead,
+    AccountLookupResults,
     AdminAccountRead,
     AdminCreated,
     AdminPromoted,
@@ -49,6 +53,16 @@ router = APIRouter(
 def _reference(account: Account) -> str:
     """The same short, quotable account reference the profile page shows."""
     return account.id.split("-")[0].upper()
+
+
+# The account reference is the leading segment of a UUID, so a valid search term is hex digits and
+# dashes. At least two characters, to stop an empty or one-character query dragging back the whole
+# table; at most a full UUID.
+_LOOKUP_TERM = re.compile(r"^[0-9a-f-]{2,36}$")
+
+# A short prefix can legitimately match a great many accounts. Return at most this many and flag that
+# there were more, rather than build an unbounded response.
+LOOKUP_LIMIT = 500
 
 
 def _validate_window(window: str) -> str:
@@ -300,4 +314,63 @@ def promote_account(
             f"{_reference(account)} is now an admin. The change takes effect on their next request "
             "— they do not need to sign in again."
         ),
+    )
+
+
+# --- Account lookup ------------------------------------------------------------------------------
+
+@router.get("/accounts/lookup", response_model=AccountLookupResults)
+def lookup_accounts(
+    reference: str,
+    db: Session = Depends(get_db),
+    _admin: Account = Depends(get_current_admin),
+):
+    """Find accounts by the reference shown on a visitor's profile, and report their door status.
+
+    This is the manual fallback for the day the QR scanner cannot tell staff whether a pass is
+    genuine or already spent: a visitor reads out the reference from their profile, and this returns
+    whether that account voted, verified and — the point of it — redeemed, and when.
+
+    The reference is the leading segment of the account UUID, so the search is a prefix match on the
+    id. A short prefix can match many accounts (hence the cap and the ``truncated`` flag); a full
+    UUID pasted in matches exactly one. The match exposes only status flags and their timestamps —
+    the survey answers are not linked to an account anywhere, so nothing here can deanonymise a
+    response.
+    """
+    normalized = reference.strip().lower()
+    if not _LOOKUP_TERM.match(normalized):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Enter at least two characters of an account reference.",
+        )
+
+    # id.like('<prefix>%') — ids are stored lowercase, so the term was lowercased to match. Fetch one
+    # past the cap purely to know whether more existed, then trim.
+    rows = (
+        db.query(Account)
+        .filter(Account.id.like(f"{normalized}%"))
+        .order_by(Account.created_at)
+        .limit(LOOKUP_LIMIT + 1)
+        .all()
+    )
+    truncated = len(rows) > LOOKUP_LIMIT
+    rows = rows[:LOOKUP_LIMIT]
+
+    return AccountLookupResults(
+        query=normalized.upper(),
+        count=len(rows),
+        truncated=truncated,
+        results=[
+            AccountLookupRead(
+                account_id=account.id,
+                reference=_reference(account),
+                email_verified=account.email_verified_at is not None,
+                email_verified_at=account.email_verified_at,
+                has_voted=account.has_voted,
+                has_redeemed=account.has_redeemed,
+                redeemed_at=account.redeemed_at,
+                created_at=account.created_at,
+            )
+            for account in rows
+        ],
     )

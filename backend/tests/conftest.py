@@ -24,6 +24,9 @@ os.environ.setdefault("PEPPER", "test-pepper")
 os.environ.setdefault("ACCESS_TOKEN_EXPIRE_MINUTES", "15")
 os.environ.setdefault("DATABASE_URL", f"sqlite:///{_TEST_DB_PATH}")
 os.environ.setdefault("APP_NAME", "Culture Fest")
+# Pin the app clock to UTC in tests so timestamps and window maths are deterministic wherever the
+# suite runs. Production defaults to Europe/Athens (see src/clock.py).
+os.environ.setdefault("APP_TIMEZONE", "UTC")
 # Deliberately no RESEND_API_KEY: nothing in the suite may reach the network. Delivery is captured
 # by the `sent_emails` fixture below.
 

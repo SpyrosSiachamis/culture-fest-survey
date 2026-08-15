@@ -151,6 +151,24 @@ export type AdminAccount = {
   is_self: boolean;
 };
 
+export type AccountLookup = {
+  account_id: string;
+  reference: string;
+  email_verified: boolean;
+  email_verified_at: string | null;
+  has_voted: boolean;
+  has_redeemed: boolean;
+  redeemed_at: string | null;
+  created_at: string;
+};
+
+export type AccountLookupResults = {
+  query: string;
+  count: number;
+  truncated: boolean;
+  results: AccountLookup[];
+};
+
 /** Field name -> selected values. Empty arrays are dropped before the request is built. */
 export type FilterSelection = Record<string, string[]>;
 
@@ -226,4 +244,17 @@ export function promoteAccountToAdmin(email: string) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email }),
   });
+}
+
+/**
+ * Find accounts by the reference from a visitor's profile, for the redemption fallback.
+ *
+ * A short prefix can match many accounts, so the result is capped and carries a `truncated` flag; a
+ * full reference matches one. A too-short or malformed term is a 422 (AdminRequestError), not an
+ * AdminNotFound — a bad search must not be mistaken for a lost admin session.
+ */
+export function lookupAccounts(reference: string) {
+  return adminRequest<AccountLookupResults>(
+    `/admin/accounts/lookup?reference=${encodeURIComponent(reference)}`
+  );
 }

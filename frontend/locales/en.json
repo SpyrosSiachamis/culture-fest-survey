@@ -156,7 +156,30 @@
     "nav": {
       "overview": "Overview",
       "responses": "Responses",
+      "lookup": "Lookup",
       "admins": "Admins"
+    },
+    "lookup": {
+      "heading": "Account lookup",
+      "intro": "Look up an account by the reference on its profile to check its door status. A fallback for when the scanner cannot confirm a pass.",
+      "searchTitle": "Search",
+      "searchHint": "Enter the account reference the visitor shows on their profile. A partial reference matches more accounts.",
+      "referenceLabel": "Account reference",
+      "referencePlaceholder": "e.g. 565A9569",
+      "search": "Search",
+      "searching": "Searching",
+      "empty": "Enter a reference above to search.",
+      "noMatch": "No account matches “{query}”.",
+      "matchCount": "{count} account(s) match “{query}”.",
+      "truncated": "Showing the first {limit}; narrow the reference to see fewer.",
+      "redeemed": "Redeemed",
+      "redeemedWhen": "Redeemed on {when}",
+      "redeemedNoTime": "Redeemed (time not recorded)",
+      "voted": "Voted",
+      "verified": "Verified",
+      "created": "Created",
+      "yes": "Yes",
+      "no": "No"
     },
     "metrics": {
       "accounts": "Accounts",

@@ -24,7 +24,7 @@ import {
   dateTimeFormatter,
   formatNumber,
   formatPercent,
-  parseUtc,
+  parseStamp,
   tickFormatter,
 } from "../components/format";
 
@@ -118,7 +118,7 @@ export default function OverviewPage() {
         ) : overview ? (
           <TimeSeriesChart
             data={overview.series.map((point) => ({
-              at: parseUtc(point.start),
+              at: parseStamp(point.start),
               primary: point.accounts_cumulative,
               secondary: point.surveys_cumulative,
             }))}

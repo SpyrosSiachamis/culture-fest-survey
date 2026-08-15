@@ -23,7 +23,15 @@ import { useLang } from "@/components/LanguageProvider";
 import { NotFoundScreen } from "@/app/components/NotFoundScreen";
 import { AdmButton, Skeleton } from "./AdminUI";
 import { useAdmin } from "./AdminProvider";
-import { BarsIcon, CloseIcon, PanelIcon, ShieldIcon, SignOutIcon, TrendIcon } from "./Icons";
+import {
+  BarsIcon,
+  CloseIcon,
+  PanelIcon,
+  SearchIcon,
+  ShieldIcon,
+  SignOutIcon,
+  TrendIcon,
+} from "./Icons";
 
 const COLLAPSE_KEY = "cf-admin-aside-collapsed";
 
@@ -61,13 +69,14 @@ const collapseStore = {
 
 type NavItem = {
   href: string;
-  labelKey: "overview" | "responses" | "admins";
+  labelKey: "overview" | "responses" | "lookup" | "admins";
   Icon: (props: { className?: string }) => React.ReactElement;
 };
 
 const NAV: NavItem[] = [
   { href: "/admin/dashboard", labelKey: "overview", Icon: TrendIcon },
   { href: "/admin/dashboard/responses", labelKey: "responses", Icon: BarsIcon },
+  { href: "/admin/dashboard/lookup", labelKey: "lookup", Icon: SearchIcon },
   { href: "/admin/dashboard/admins", labelKey: "admins", Icon: ShieldIcon },
 ];
 

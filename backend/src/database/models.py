@@ -2,10 +2,11 @@ import enum
 import uuid
 from datetime import datetime
 from typing import Optional
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, JSON, SmallInteger, String, Text, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, JSON, SmallInteger, String, Text
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.dialects.mysql import CHAR
 from sqlalchemy.orm import Mapped, mapped_column
+from src import clock
 from src.database.session import Base
 from src.enums import AudienceType, Gender, AccountType
 
@@ -25,8 +26,10 @@ class Account(Base):
     # has_voted indicates whether the user has voted in the current voting period. This is used to prevent multiple votes from the same user and to keep track of their voting status without exposing their identity.
     has_voted: Mapped[bool] = mapped_column(Boolean, default=False)
 
-    # used for historical tracking of the account's creation time, useful for analytics and auditing purposes
-    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    # used for historical tracking of the account's creation time, useful for analytics and auditing
+    # purposes. Set by the application clock (src/clock.py) rather than the database, so every
+    # timestamp in the system comes from one timezone — see the note there.
+    created_at: Mapped[datetime] = mapped_column(default=clock.now)
 
     # used to track the type of account
     role: Mapped[AccountType] = mapped_column(SAEnum(AccountType), default=AccountType.USER)
@@ -58,6 +61,7 @@ class Account(Base):
 
     # Stamped by the door scan, alongside has_redeemed. The user-facing redemption-status page
     # shows it back so somebody whose scan appeared to fail can confirm what actually happened.
+    # When the scanner is built it must stamp this with clock.now(), like every other timestamp.
     redeemed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True, default=None)
 
     # Note: the QR credential itself is deliberately NOT a column. It is a short-lived signed JWT
@@ -98,7 +102,7 @@ class EmailVerificationCode(Base):
     # Caps how many times a single pending signup can request a new code.
     resend_count: Mapped[int] = mapped_column(SmallInteger, default=0, nullable=False)
 
-    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(default=clock.now)
 
     __table_args__ = (
         Index("ix_email_verification_codes_expires_at", "expires_at"),
@@ -138,4 +142,4 @@ class SurveyResponse(Base):
     has_student_pass: Mapped[Optional[bool]] = mapped_column(Boolean)
 
     open_feedback: Mapped[Optional[str]] = mapped_column(Text)
-    submitted_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    submitted_at: Mapped[datetime] = mapped_column(default=clock.now)

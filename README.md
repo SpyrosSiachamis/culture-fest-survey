@@ -99,10 +99,11 @@ minted, what has to be configured before going live, and a build plan for the sc
 
 ## Admin dashboard
 
-At `/admin/dashboard`. Three pages behind one collapsible aside: **Overview** (platform size,
+At `/admin/dashboard`. Four pages behind one collapsible aside: **Overview** (platform size,
 accounts-versus-surveys over a rolling window, participation), **Responses** (every answer
-distribution, filterable, with the raw numbers underneath) and **Admins** (who has access, and how
-to add someone).
+distribution, filterable, with the raw numbers underneath), **Lookup** (search an account by the
+reference on its profile and see its voted / verified / redeemed status — the manual fallback for
+when the door scanner cannot confirm a pass) and **Admins** (who has access, and how to add someone).
 
 ### Getting in
 
@@ -155,6 +156,14 @@ all of them.
 Note that "surveys" is counted from submitted responses, never from accounts — an account that
 exists is not a completed survey, and the gap between the two is shown rather than smoothed over.
 
+### Time
+
+Every stored timestamp is **Europe/Athens** local wall-clock time — the festival's own timezone —
+set by one application clock (`backend/src/clock.py`) so records, the rolling-window maths and every
+displayed time all agree. Change it with `APP_TIMEZONE` if the event moves; the test suite pins it to
+UTC for determinism. Timestamps written before this change are UTC and read three hours early until
+they age out.
+
 ### Anonymity
 
 Nothing on the dashboard can identify a respondent. `survey_responses` holds no account reference,
@@ -162,6 +171,10 @@ the analytics endpoints return counts rather than rows, and free-text answers (`
 `accommodation_area`) are excluded from the catalogue entirely — there is nothing to bucket, and
 `accommodation_area` is the one answer the survey itself warns could identify someone. Admin
 accounts are listed as a reference and a date, because a peppered hash is all that is stored.
+
+The Lookup page is the one place account status is shown by reference, but it exposes only the voted
+/ verified / redeemed flags and their timestamps — never the email or phone (only hashes exist), and
+because responses carry no account id, nothing there is tied back to a survey answer.
 
 ## Production
 
