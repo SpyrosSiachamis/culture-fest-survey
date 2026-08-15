@@ -37,6 +37,46 @@
   --color-magenta: #d6249f;
   --color-orange: #ff7a18;
   --color-violet: #6d28d9;
+
+  /* --- Admin dashboard ----------------------------------------------------------------------
+     A separate, deliberately neutral palette. The festival gradient is the visitor-facing brand;
+     the dashboard is a working tool that people read numbers off for an hour at a time, and a
+     saturated background behind a chart makes the data harder, not easier, to read. Prefixed
+     `adm-` so the two systems cannot be mixed up at a call site. */
+  --color-adm-bg: #121212;
+  --color-adm-text: #e0e0e0;
+  --color-adm-muted: #b0b0b0;
+  --color-adm-line: #444444;
+  --color-adm-accent: #888888;
+}
+
+/* Panels and hovers are drawn as the text colour at low alpha rather than as new greys, so the
+   surface stays inside the five-colour palette however it is composited. */
+.adm-panel {
+  background: rgba(224, 224, 224, 0.03);
+  border: 1px solid var(--color-adm-line);
+}
+
+.adm-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-adm-line) transparent;
+}
+
+/* The aside's width transition. Reduced-motion users get the same layout with no sweep — the
+   width still changes, it just arrives immediately. */
+.adm-aside {
+  transition: width 220ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.adm-aside-label {
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .adm-aside,
+  .adm-aside-label {
+    transition: none;
+  }
 }
 
 @media (prefers-color-scheme: dark) {

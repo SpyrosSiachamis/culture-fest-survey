@@ -8,6 +8,7 @@ from src.database import models  # noqa: F401 — registers models on Base
 from src.database.schema_patch import ensure_columns
 from src.rate_limit import limiter
 from src.routers import accounts
+from src.routers import admin
 from src.routers import surveys
 
 #TODO: Drop the database when testing is done, or use a separate test database. This is just for development purposes.
@@ -46,3 +47,4 @@ def root():
 
 app.include_router(accounts.router)
 app.include_router(surveys.router)
+app.include_router(admin.router)

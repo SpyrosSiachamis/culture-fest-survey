@@ -29,7 +29,10 @@ def submit_survey(
     account.allowed_to_redeem = True
     account.has_redeemed = False
 
-    response = SurveyResponse(**payload.model_dump())
+    # mode="json" so the enum members come out as their plain string values. The columns behind
+    # these fields are VARCHAR/JSON, and a str-subclass enum handed straight to the driver stringifies
+    # as "AgeRange.R18_20" rather than "18-20".
+    response = SurveyResponse(**payload.model_dump(mode="json"))
     db.add(response)
     # One commit for both: the flag on the account and the anonymous response row land together, so
     # a failure cannot leave an account marked as voted with no response stored (or the reverse).
