@@ -20,6 +20,7 @@ import { useCallback, useState, useSyncExternalStore } from "react";
 
 import { logout } from "@/lib/api";
 import { useLang } from "@/components/LanguageProvider";
+import { NotFoundScreen } from "@/app/components/NotFoundScreen";
 import { AdmButton, Skeleton } from "./AdminUI";
 import { useAdmin } from "./AdminProvider";
 import { BarsIcon, CloseIcon, PanelIcon, ShieldIcon, SignOutIcon, TrendIcon } from "./Icons";
@@ -108,18 +109,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // What the API said, repeated verbatim. It refused without saying what it was refusing, and this
-  // says no more than that.
+  // What the API said, repeated verbatim — and repeated as the *same screen* a mistyped URL gets,
+  // rather than a dashboard-flavoured one. A 404 that looked like it came from the dashboard would
+  // confirm there is a dashboard, which is the one thing the API's masking is trying not to do.
   if (state === "notFound") {
-    return (
-      <main className="flex min-h-dvh flex-col items-center justify-center gap-3 bg-adm-bg px-6 text-center">
-        <h1 className="text-2xl font-semibold text-adm-text">404</h1>
-        <p className="text-sm text-adm-muted">{t.admin.notFound}</p>
-        <Link href="/" className="mt-2 text-sm text-adm-text underline underline-offset-4">
-          {t.admin.backToSite}
-        </Link>
-      </main>
-    );
+    return <NotFoundScreen />;
   }
 
   if (state === "error") {

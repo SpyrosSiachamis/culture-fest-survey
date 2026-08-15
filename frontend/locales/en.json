@@ -127,10 +127,15 @@
     "retry": "Try again",
     "backToSurvey": "Back to the survey"
   },
+  "notFound": {
+    "title": "Not found · Culture Fest",
+    "eyebrow": "Error",
+    "heading": "This page could not be found.",
+    "body": "The address may be mistyped, or the page may have moved. Everything else is where you left it.",
+    "home": "Go to Culture Fest"
+  },
   "admin": {
     "title": "Culture Fest Admin",
-    "notFound": "This page could not be found.",
-    "backToSite": "Go to Culture Fest",
     "loadError": "Could not load this data. Check your connection and try again.",
     "retry": "Try again",
     "noData": "Nothing recorded yet.",
