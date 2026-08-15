@@ -21,6 +21,7 @@ ADMIN_ROUTES = [
     ("GET", "/admin/analytics/breakdown"),
     ("GET", "/admin/accounts"),
     ("POST", "/admin/accounts"),
+    ("POST", "/admin/accounts/promote"),
 ]
 
 NEW_ADMIN = {
@@ -258,6 +259,184 @@ def test_creating_an_admin_rejects_a_duplicate(client, sent_emails, db_session):
     existing = get_account(db_session, admin_payload["email"])
     assert existing is not None
     assert existing.email_verified_at is not None
+
+
+# --- Promoting an existing account ------------------------------------------------------------------
+
+
+def test_a_user_cannot_promote_anyone(client, sent_emails, db_session):
+    """Including themselves — the endpoint is unreachable, so the role never changes."""
+    payload = _verified_account(client, sent_emails)
+    _login(client, payload)
+
+    response = client.post("/admin/accounts/promote", json={"email": payload["email"]})
+
+    assert response.status_code == 404
+    account = get_account(db_session, payload["email"])
+    assert account is not None
+    assert account.role == AccountType.USER
+
+
+def test_an_admin_can_promote_a_verified_account(client, sent_emails, db_session):
+    _signed_in_admin(client, sent_emails, db_session)
+    target = _verified_account(
+        client, sent_emails, email="promote-me@example.com", phone="+306933333333"
+    )
+
+    response = client.post("/admin/accounts/promote", json={"email": target["email"]})
+
+    assert response.status_code == 200, response.text
+
+    account = get_account(db_session, target["email"])
+    assert account is not None
+    db_session.refresh(account)
+    assert account.role == AccountType.ADMIN
+    # The reference is the only confirmation the caller gets that the right account was hit.
+    assert response.json()["reference"] == account.id.split("-")[0].upper()
+
+
+def test_a_promoted_account_reaches_the_dashboard_on_its_existing_session(
+    client, sent_emails, db_session
+):
+    """The role is read from the database on every request, so an already-signed-in account gains
+    access without having to sign in again."""
+    from src.auth import AUTH_COOKIE_NAME
+
+    _signed_in_admin(client, sent_emails, db_session)
+    target = _verified_account(
+        client, sent_emails, email="promote-me@example.com", phone="+306933333333"
+    )
+
+    admin_cookie = client.cookies.get(AUTH_COOKIE_NAME)
+
+    # Sign the target in first, and confirm the dashboard is hidden from them.
+    client.cookies.clear()
+    _login(client, target)
+    target_cookie = client.cookies.get(AUTH_COOKIE_NAME)
+    assert client.get("/admin/session").status_code == 404
+
+    client.cookies.set(AUTH_COOKIE_NAME, admin_cookie)
+    assert (
+        client.post(
+            "/admin/accounts/promote", json={"email": target["email"]}
+        ).status_code
+        == 200
+    )
+
+    # Same token as before the promotion.
+    client.cookies.set(AUTH_COOKIE_NAME, target_cookie)
+    assert client.get("/admin/session").status_code == 200
+
+
+def test_promotion_matches_the_address_through_the_stored_hash(
+    client, sent_emails, db_session
+):
+    """Nothing readable is stored, so the lookup is `hash_identifier(email) == email_hash`. The
+    same normalisation signup used has to apply, or a valid address would miss its own account."""
+    from src.auth import hash_identifier
+
+    _signed_in_admin(client, sent_emails, db_session)
+    target = _verified_account(
+        client, sent_emails, email="promote-me@example.com", phone="+306933333333"
+    )
+
+    account = get_account(db_session, target["email"])
+    assert account is not None
+    assert account.email_hash == hash_identifier(target["email"])
+
+    # Case and surrounding whitespace are normalised away by hash_identifier, so this is the same
+    # account as far as the lookup is concerned.
+    response = client.post("/admin/accounts/promote", json={"email": "  Promote-Me@Example.com  "})
+
+    assert response.status_code == 200
+    assert response.json()["reference"] == account.id.split("-")[0].upper()
+
+
+def test_promoting_an_unknown_address_is_not_a_404(client, sent_emails, db_session):
+    """A 404 on this router means "you are not an admin" and sends the dashboard to its masked
+    not-found screen. A mistyped address must not look like a lost session."""
+    _signed_in_admin(client, sent_emails, db_session)
+
+    response = client.post("/admin/accounts/promote", json={"email": "nobody@example.com"})
+
+    assert response.status_code == 422
+    assert "No account" in response.json()["detail"]
+
+
+def test_promoting_an_unverified_account_is_refused(client, sent_emails, db_session):
+    """Login refuses an unverified account, so promoting one would mint an admin who cannot sign
+    in and no explanation of why."""
+    _signed_in_admin(client, sent_emails, db_session)
+    _code, target = signup(
+        client, sent_emails, email="pending@example.com", phone="+306944444444"
+    )
+
+    response = client.post("/admin/accounts/promote", json={"email": target["email"]})
+
+    assert response.status_code == 422
+    account = get_account(db_session, target["email"])
+    assert account is not None
+    assert account.role == AccountType.USER
+
+
+def test_promoting_an_existing_admin_is_reported_not_silently_repeated(
+    client, sent_emails, db_session
+):
+    admin_payload = _signed_in_admin(client, sent_emails, db_session)
+
+    response = client.post("/admin/accounts/promote", json={"email": admin_payload["email"]})
+
+    assert response.status_code == 409
+
+
+def test_promotion_changes_nothing_but_the_role(client, sent_emails, db_session):
+    """It must not touch verification, voting or the door pass on the way past."""
+    _signed_in_admin(client, sent_emails, db_session)
+    target = _verified_account(
+        client, sent_emails, email="promote-me@example.com", phone="+306933333333"
+    )
+
+    before = get_account(db_session, target["email"])
+    assert before is not None
+    snapshot = (
+        before.email_hash,
+        before.phone_hash,
+        before.hashed_password,
+        before.email_verified_at,
+        before.has_voted,
+        before.allowed_to_redeem,
+        before.has_redeemed,
+        before.created_at,
+    )
+
+    assert (
+        client.post("/admin/accounts/promote", json={"email": target["email"]}).status_code == 200
+    )
+
+    after = get_account(db_session, target["email"])
+    assert after is not None
+    db_session.refresh(after)
+    assert (
+        after.email_hash,
+        after.phone_hash,
+        after.hashed_password,
+        after.email_verified_at,
+        after.has_voted,
+        after.allowed_to_redeem,
+        after.has_redeemed,
+        after.created_at,
+    ) == snapshot
+    assert after.role == AccountType.ADMIN
+
+
+def test_promotion_creates_no_account(client, sent_emails, db_session):
+    """The distinction from POST /admin/accounts: this one only ever edits a row that exists."""
+    _signed_in_admin(client, sent_emails, db_session)
+    before = db_session.query(Account).count()
+
+    client.post("/admin/accounts/promote", json={"email": "nobody@example.com"})
+
+    assert db_session.query(Account).count() == before
 
 
 # --- The catalogue is derived, not written down ---------------------------------------------------

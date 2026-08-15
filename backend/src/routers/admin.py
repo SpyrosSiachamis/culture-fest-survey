@@ -24,6 +24,8 @@ from src.schemas import (
     AccountCreate,
     AdminAccountRead,
     AdminCreated,
+    AdminPromoted,
+    AdminPromoteRequest,
     AdminSessionRead,
     AnalyticsFieldRead,
     AnalyticsSchemaRead,
@@ -230,5 +232,72 @@ def create_admin(
         message=(
             "Admin account created. A verification code has been emailed to it — the account "
             "cannot sign in until that code is entered."
+        ),
+    )
+
+
+@router.post("/accounts/promote", response_model=AdminPromoted)
+def promote_account(
+    payload: AdminPromoteRequest,
+    db: Session = Depends(get_db),
+    _admin: Account = Depends(get_current_admin),
+):
+    """Give an existing account admin access.
+
+    The other half of ``POST /accounts``: that one mints a new account, this one changes the role of
+    somebody who already signed up. Kept separate rather than folded into one endpoint because they
+    are different acts with different risks — creating touches nothing that exists, promoting hands
+    the dashboard to an account this admin did not make and cannot see inside.
+
+    The account is found by hashing the submitted address with ``hash_identifier``, the same peppered
+    function that produced ``email_hash`` at signup. No plaintext address is stored anywhere, so this
+    is the only way to name an existing account, and a typo cannot half-match: it either hashes to a
+    row or it does not.
+
+    Every refusal below is deliberately *not* a 404. On this router a 404 means "you are not an
+    admin" and the dashboard reacts by reloading into the masked not-found screen, so an ordinary
+    "no such account" has to be a different status or a mistyped address would look like a lost
+    session.
+    """
+    account = (
+        db.query(Account)
+        .filter(Account.email_hash == hash_identifier(payload.email))
+        .first()
+    )
+
+    # Enumeration is not a concern here — the caller is already an authenticated admin — and a
+    # generic answer would be actively harmful, because a silent no-op is indistinguishable from a
+    # successful promotion when there is no name to read back.
+    if account is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="No account is registered with that email address.",
+        )
+
+    # Same rule the bootstrap script enforces: login refuses an unverified account, so promoting one
+    # would produce an admin who cannot sign in and no clue as to why.
+    if account.email_verified_at is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=(
+                "That account has not verified its email address yet, so it could not sign in as "
+                "an admin. Ask them to verify it first."
+            ),
+        )
+
+    if account.role == AccountType.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"{_reference(account)} is already an admin.",
+        )
+
+    account.role = AccountType.ADMIN
+    db.commit()
+
+    return AdminPromoted(
+        reference=_reference(account),
+        message=(
+            f"{_reference(account)} is now an admin. The change takes effect on their next request "
+            "— they do not need to sign in again."
         ),
     )

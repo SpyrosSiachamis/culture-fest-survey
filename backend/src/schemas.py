@@ -201,6 +201,24 @@ class AdminCreated(pydantic.BaseModel):
     message: str
 
 
+class AdminPromoteRequest(pydantic.BaseModel):
+    """Promote the account that owns this address.
+
+    The address is the only handle an admin has on an existing account — nothing readable is stored,
+    so there is no name to pick from a list and no account id to paste. It is matched by hashing it
+    with the same peppered function the account was created with; a mismatch simply finds nothing.
+    """
+    email: pydantic.EmailStr
+
+
+class AdminPromoted(pydantic.BaseModel):
+    # Echoed back so the caller can confirm *which* account they just promoted. It is the only
+    # confirmation possible: the address they typed cannot be read back out of the database, so
+    # matching this against the admin list is how a wrong-but-registered address gets noticed.
+    reference: str
+    message: str
+
+
 class AnalyticsFieldRead(pydantic.BaseModel):
     """One survey question, described well enough for the frontend to build its own controls.
 

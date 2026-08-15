@@ -200,10 +200,30 @@ export type NewAdminInput = {
   password: string;
 };
 
+export type AdminMutationResult = { reference: string; message: string };
+
 export function createAdminAccount(input: NewAdminInput) {
-  return adminRequest<{ reference: string; message: string }>("/admin/accounts", {
+  return adminRequest<AdminMutationResult>("/admin/accounts", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
+  });
+}
+
+/**
+ * Give an existing account admin access.
+ *
+ * The address is matched against the stored peppered hash — nothing readable is kept, so this is
+ * the only way to name an account that already exists. The returned `reference` is the confirmation
+ * that the right one was hit; there is no name to read back.
+ *
+ * Note that a wrong address here does *not* surface as `AdminNotFound`. The server answers 422 for
+ * "no such account" precisely so that a typo is not mistaken for a lost session.
+ */
+export function promoteAccountToAdmin(email: string) {
+  return adminRequest<AdminMutationResult>("/admin/accounts/promote", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
   });
 }

@@ -21,6 +21,7 @@ import {
   AdminRequestError,
   createAdminAccount,
   fetchAdminAccounts,
+  promoteAccountToAdmin,
   type AdminAccount,
 } from "@/lib/adminApi";
 import { format } from "@/lib/i18n";
@@ -180,6 +181,8 @@ export default function AdminsPage() {
         )}
       </Panel>
 
+      <PromotePanel onPromoted={() => setAttempt((current) => current + 1)} />
+
       <Panel>
         <PanelHeading title={t.admin.admins.createTitle} hint={t.admin.admins.createHint} />
 
@@ -231,5 +234,92 @@ export default function AdminsPage() {
         </form>
       </Panel>
     </div>
+  );
+}
+
+/**
+ * Promote an account that already exists.
+ *
+ * Kept as its own component with its own state, not a second mode of the create form, because they
+ * are different acts: creating touches nothing that exists, promoting hands the dashboard to
+ * somebody else's account. Sharing a field would make it possible to fill in one form and submit
+ * the other.
+ *
+ * The address is the only handle there is. Nothing readable is stored, so the server matches it by
+ * hashing it the same way signup did, and answers with the account's short reference — which is the
+ * one piece of confirmation available that the right account was hit. Anyone unsure should check it
+ * against the list above.
+ */
+function PromotePanel({ onPromoted }: { onPromoted: () => void }) {
+  const { t } = useLang();
+  const v = makeValidators(t);
+
+  const [email, setEmail] = useState("");
+  const [fieldError, setFieldError] = useState<string | undefined>(undefined);
+  const [submitting, setSubmitting] = useState(false);
+  const [result, setResult] = useState<{ tone: "success" | "error"; message: string } | null>(null);
+
+  async function handlePromote(event: React.FormEvent) {
+    event.preventDefault();
+    if (submitting) return;
+
+    const error = v.email(email) ?? undefined;
+    setFieldError(error);
+    if (error) return;
+
+    setSubmitting(true);
+    setResult(null);
+
+    try {
+      const promoted = await promoteAccountToAdmin(email.trim());
+      setResult({ tone: "success", message: promoted.message });
+      setEmail("");
+      onPromoted();
+    } catch (caught) {
+      if (caught instanceof AdminNotFound) {
+        globalThis.location.reload();
+        return;
+      }
+      // "No such account" and "not verified yet" arrive as a 422 with a usable sentence, so the
+      // server's own message is shown rather than a generic failure. A 404 would have meant the
+      // session went, which is handled above — not here.
+      setResult({
+        tone: "error",
+        message:
+          caught instanceof AdminRequestError ? caught.message : t.admin.admins.promoteFailed,
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Panel>
+      <PanelHeading title={t.admin.admins.promoteTitle} hint={t.admin.admins.promoteHint} />
+
+      <form onSubmit={handlePromote} noValidate className="flex flex-col gap-4">
+        {result && <AdmNotice tone={result.tone}>{result.message}</AdmNotice>}
+
+        <AdmField
+          id="promote-email"
+          label={t.admin.admins.promoteEmail}
+          type="email"
+          inputMode="email"
+          autoComplete="off"
+          placeholder={t.signup.emailPlaceholder}
+          value={email}
+          error={fieldError}
+          hint={t.admin.admins.promoteEmailHint}
+          disabled={submitting}
+          onChange={(event) => setEmail(event.target.value)}
+        />
+
+        <div>
+          <AdmButton type="submit" disabled={submitting}>
+            {submitting ? t.admin.admins.promoting : t.admin.admins.promote}
+          </AdmButton>
+        </div>
+      </form>
+    </Panel>
   );
 }
