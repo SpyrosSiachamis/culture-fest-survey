@@ -27,7 +27,7 @@ export function ScaleGrid({
               onClick={() => onChange(n)}
               aria-pressed={selected}
               aria-label={`${n} out of 10`}
-              className={`notch-sm display flex aspect-square min-h-14 items-center justify-center border text-2xl transition-colors ${
+              className={`notch-sm display flex aspect-square min-h-14 items-center justify-center border text-2xl transition-colors cursor-pointer ${
                 selected
                   ? "border-gold bg-gold text-ink"
                   : "border-bone/20 bg-bone/5 text-bone hover:border-bone/45 hover:bg-bone/10"

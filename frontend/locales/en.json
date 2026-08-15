@@ -61,6 +61,8 @@
     "resend": "Send a new code",
     "resendIn": "Resend in {seconds}s",
     "footnote": "Codes last 15 minutes and work once. Check your spam folder if nothing lands.",
+    "strandedHint": "Your account already exists and just needs this code. If you lose this page, sign in as usual with your email and password — you will land straight back here.",
+    "strandedLink": "Sign in",
     "verifiedHeading": "You're in",
     "verifiedBody": "Your address is confirmed and your account is active. Sign in and the survey is all yours.",
     "needAccount": "Need an account?",

@@ -21,7 +21,7 @@ export function LocaleToggle({ className = "" }: { className?: string }) {
           type="button"
           onClick={() => setLang(option.code)}
           aria-pressed={lang === option.code}
-          className={`ticker min-h-11 px-4 text-[11px] transition-colors ${
+          className={`ticker min-h-11 px-4 text-[11px] transition-colors cursor-pointer ${
             lang === option.code ? "bg-gold text-ink" : "opacity-70 hover:opacity-100"
           }`}
         >

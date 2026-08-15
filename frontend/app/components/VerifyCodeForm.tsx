@@ -197,6 +197,17 @@ export function VerifyCodeForm({
         </GhostButton>
 
         <p className="text-center text-xs leading-relaxed text-bone/45">{t.verify.footnote}</p>
+
+        {/* The account is created by signup, before any code is entered, and nothing else on this
+            screen says so. Someone who closes the tab here has an account they cannot tell exists
+            — this is the way back to it: signing in normally answers "verify your email first"
+            and links straight to this form. */}
+        <p className="text-center text-xs leading-relaxed text-bone/45">
+          {t.verify.strandedHint}{" "}
+          <Link href="/" className="font-semibold text-gold underline">
+            {t.verify.strandedLink}
+          </Link>
+        </p>
       </div>
     </form>
   );

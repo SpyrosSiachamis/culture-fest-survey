@@ -19,7 +19,7 @@ export function ChoiceCard({
       type="button"
       onClick={onSelect}
       aria-pressed={selected}
-      className={`notch-sm flex w-full items-center gap-4 border px-4 py-4 text-left transition-colors ${
+      className={`notch-sm flex w-full items-center gap-4 border px-4 py-4 text-left transition-colors cursor-pointer ${
         selected
           ? "border-gold bg-gold text-ink"
           : "border-bone/20 bg-bone/5 text-bone hover:border-bone/45 hover:bg-bone/10"

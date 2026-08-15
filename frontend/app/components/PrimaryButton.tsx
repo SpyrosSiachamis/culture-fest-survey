@@ -9,7 +9,7 @@ export function PrimaryButton({
       {...props}
       // py-3 + min-h lets long labels (Greek runs longer than English) wrap
       // to two lines instead of spilling out of the button.
-      className={`notch-sm display flex min-h-14 w-full items-center justify-center gap-2 bg-gold px-6 py-3 text-center text-lg leading-tight text-ink transition-[transform,filter] active:scale-[0.985] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:brightness-100 ${className}`}
+      className={`notch-sm display flex min-h-14 w-full items-center justify-center gap-2 bg-gold px-6 py-3 text-center text-lg leading-tight text-ink transition-[transform,filter] active:scale-[0.985] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:brightness-100 cursor-pointer ${className}`}
     >
       {children}
     </button>
@@ -25,7 +25,7 @@ export function GhostButton({
   return (
     <button
       {...props}
-      className={`ticker flex min-h-11 items-center justify-center px-4 text-xs text-bone/70 transition-colors hover:text-bone ${className}`}
+      className={`ticker flex min-h-11 items-center justify-center px-4 text-xs text-bone/70 transition-colors hover:text-bone cursor-pointer ${className}`}
     >
       {children}
     </button>

@@ -20,7 +20,7 @@ export function ChipGroup({
             type="button"
             onClick={() => onToggle(option.value)}
             aria-pressed={isOn}
-            className={`notch-xs ticker min-h-11 px-4 text-[11px] transition-colors ${
+            className={`notch-xs ticker min-h-11 px-4 text-[11px] transition-colors cursor-pointer ${
               isOn
                 ? "bg-gold text-ink"
                 : "border border-bone/20 bg-bone/5 text-bone hover:border-bone/45"
