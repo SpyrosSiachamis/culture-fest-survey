@@ -1,0 +1,42 @@
+# Production image for the Next.js frontend.
+#
+# The dev Dockerfile runs `next dev` with NODE_ENV=development and a bind-mounted source tree; this
+# one builds the app once and serves the optimized output with `next start`. Multi-stage so the
+# final image ships only what runtime needs.
+#
+# NEXT_PUBLIC_* values are inlined into the browser bundle at BUILD time, so the API URL has to be
+# supplied here as a build arg — setting it at container start would be too late.
+
+# --- build ------------------------------------------------------------------------------------
+FROM node:24.18.1-slim AS build
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ENV NODE_ENV=production
+RUN npm run build
+
+# Drop dev dependencies now that the build is done, so they are not carried into the runtime image.
+RUN npm prune --omit=dev
+
+# --- runtime ----------------------------------------------------------------------------------
+FROM node:24.18.1-slim AS runtime
+WORKDIR /app
+ENV NODE_ENV=production
+
+# Only the artifacts `next start` needs: the compiled app, pruned production deps, and the config.
+COPY --from=build /app/package*.json ./
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/.next ./.next
+COPY --from=build /app/next.config.ts ./
+
+# node:*-slim ships a non-root `node` user; run as it rather than root.
+USER node
+
+EXPOSE 3000
+CMD ["npm", "run", "start"]

@@ -163,6 +163,27 @@ the analytics endpoints return counts rather than rows, and free-text answers (`
 `accommodation_area` is the one answer the survey itself warns could identify someone. Admin
 accounts are listed as a reference and a date, because a peppered hash is all that is stored.
 
+## Production
+
+`docker-compose.yml` is the **development** stack: it publishes phpMyAdmin and the MySQL port,
+runs the dev servers with live reload, and serves plain HTTP — all fine over a private tailnet, none
+of it safe on a public host. Deploy with the separate production file instead:
+
+```bash
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+It drops phpMyAdmin, gives the database no host port (only the backend reaches it), binds the app
+ports to `127.0.0.1` for a TLS reverse proxy (Caddy, or `tailscale serve`) to front, runs real
+builds, and forces `AUTH_COOKIE_SECURE=true`. Before deploying, set in `backend/.env`:
+
+- strong `SECRET_KEY` / `PEPPER` / DB passwords (`openssl rand -hex 32` for the first two);
+- `ALLOWED_ORIGINS` — the real public origin(s);
+- `TRUSTED_PROXY_IPS` — the reverse proxy's address. The rate limiter keys on the client IP, and
+  behind a proxy every request arrives from the proxy; without this, all callers share one bucket
+  and per-IP brute-force limits stop working. Set it and `X-Forwarded-For` is honoured **only** from
+  that proxy, so no client can spoof the header to dodge a limit.
+
 ## Tests
 
 ```bash

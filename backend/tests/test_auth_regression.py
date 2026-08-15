@@ -105,6 +105,27 @@ def test_survey_submission_still_works_end_to_end(client, sent_emails):
     assert duplicate.status_code == 409
 
 
+def test_a_rejected_resubmission_writes_no_second_response(client, sent_emails, db_session):
+    """The anti-revote guard is an atomic conditional UPDATE, not a read-then-write.
+
+    A duplicate submission must be turned away *and* leave no trace: the guarded UPDATE matches zero
+    rows the second time, so the handler rolls back before inserting. If it ever regressed to
+    checking a flag and then writing regardless, this would catch the extra row even though the
+    single-threaded test client cannot reproduce the underlying race directly.
+    """
+    from src.database.models import SurveyResponse
+
+    token, _payload = _verified_login(client, sent_emails)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    assert client.post("/surveys/submit", json=SURVEY_PAYLOAD, headers=headers).status_code == 201
+    assert client.post("/surveys/submit", json=SURVEY_PAYLOAD, headers=headers).status_code == 409
+    assert client.post("/surveys/submit", json=SURVEY_PAYLOAD, headers=headers).status_code == 409
+
+    # Exactly one row, however many times submit was called.
+    assert db_session.query(SurveyResponse).count() == 1
+
+
 def test_survey_validation_is_unchanged(client, sent_emails):
     token, _payload = _verified_login(client, sent_emails)
 
