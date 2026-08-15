@@ -1,20 +1,26 @@
 "use client";
 
 import { StampBadge } from "./StampBadge";
-import { TOTAL_STEPS } from "@/lib/types";
-import { useI18n } from "@/lib/i18n";
+import { useLang } from "@/components/LanguageProvider";
+import { format } from "@/lib/i18n";
 
-export function ProgressBar({ step }: { step: number }) {
-  const { t } = useI18n();
-  const pct = Math.round((step / TOTAL_STEPS) * 100);
+/**
+ * Step stamp plus a gradient rule.
+ *
+ * `total` is passed in rather than read from a constant because the wizard's length depends on the
+ * audience branch chosen in question one.
+ */
+export function ProgressBar({ step, total }: { step: number; total: number }) {
+  const { t } = useLang();
+  const pct = Math.round((step / total) * 100);
   const pad = (n: number) => String(n).padStart(2, "0");
 
   return (
     <div className="flex items-center gap-4">
       <StampBadge
-        top={t("survey.stampTop")}
-        main={`${pad(step)}/${pad(TOTAL_STEPS)}`}
-        bottom={t("survey.stampBottom")}
+        top={t.common.step}
+        main={format(t.common.stepOf, { current: pad(step), total: pad(total) })}
+        bottom={t.common.anonymous}
         className="size-16"
       />
       <div className="min-w-0 flex-1">
@@ -23,7 +29,7 @@ export function ProgressBar({ step }: { step: number }) {
           role="progressbar"
           aria-valuenow={step}
           aria-valuemin={1}
-          aria-valuemax={TOTAL_STEPS}
+          aria-valuemax={total}
         >
           <div
             className="h-full bg-linear-to-r from-magenta via-orange to-gold transition-[width] duration-300"
@@ -31,7 +37,7 @@ export function ProgressBar({ step }: { step: number }) {
           />
         </div>
         <p className="ticker mt-2 text-[10px] text-bone/50">
-          {t("survey.progress", { pct })}
+          {format(t.common.percentComplete, { percent: pct })} — {t.common.noAnswerLinked}
         </p>
       </div>
     </div>

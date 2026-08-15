@@ -1,103 +1,255 @@
 {
-  "lang": {
-    "label": "Language",
-    "en": "EN",
-    "el": "ΕΛ"
-  },
   "brand": {
     "place": "Hersonissos · Crete",
-    "placeLong": "Hersonissos · Crete · September",
-    "line1": "Culture",
-    "line2": "Fest",
-    "tickerWords": ["Music", "Lineup", "Nights", "You"],
-    "anonTop": "100%",
-    "anonMain": "ANON",
-    "anonBottom": "No names",
-    "anonBody": "Your answers are never linked back to your account. Not by ID, not by email — by nothing at all."
+    "name": "Culture Fest",
+    "tagline": ["Music", "Lineup", "Nights", "You"]
   },
-  "home": {
-    "tickerWords": ["Lineup", "Price", "Dates", "Vibes"],
-    "body": "Four artists. One island. We're asking you what the night should look like — who plays, what it costs, which date.",
-    "note": "Takes about two minutes. Your answers are stored with no link back to you — your account only stops the same person voting twice.",
-    "cta": "Start the survey",
-    "haveAccount": "Already signed up?",
-    "login": "Log in"
+  "common": {
+    "next": "Next",
+    "back": "Back",
+    "skip": "Skip this one",
+    "submit": "Submit",
+    "sending": "Sending",
+    "signIn": "Sign in",
+    "signingIn": "Signing in",
+    "optional": "Optional",
+    "yourAnswer": "Your answer",
+    "stepOf": "{current}/{total}",
+    "percentComplete": "{percent}% complete",
+    "anonymous": "Anonymous",
+    "noAnswerLinked": "No answer is linked to you",
+    "step": "Step"
+  },
+  "anon": {
+    "badgeTop": "100%",
+    "badgeMid": "Anon",
+    "badgeBottom": "No names",
+    "blurb": "Your answers are never linked back to your account. Not by ID, not by email — by nothing at all."
+  },
+  "eyebrows": {
+    "signup": "Create account",
+    "verify": "Verify email",
+    "login": "Welcome back",
+    "done": "All done"
   },
   "signup": {
-    "title": "Get set up",
+    "heading": "Get set up",
     "intro": "Email and phone are both needed — it's how we keep one person to one vote. Neither is ever attached to your answers.",
     "email": "Email",
     "emailPlaceholder": "you@example.com",
     "phone": "Phone",
     "phonePlaceholder": "+30 694 123 4567",
     "password": "Password",
-    "passwordPlaceholder": "At least 8 characters",
-    "passwordHint": "8 characters minimum.",
+    "passwordHint": "At least {min} characters.",
     "submit": "Create account",
-    "submitBusy": "Setting up…",
-    "haveAccount": "Already have an account?",
-    "login": "Log in"
+    "submitting": "Creating",
+    "privacy": "Your email and phone are only ever stored as one-way hashes — they cannot be read back.",
+    "haveAccount": "Already signed up?",
+    "haveAccountLink": "Enter your code"
+  },
+  "verify": {
+    "heading": "Check your email",
+    "intro": "Punch in the six-digit code we just sent and your account is live.",
+    "sentTo": "Code sent to",
+    "codeLabel": "Six-digit code",
+    "verify": "Verify email",
+    "verifying": "Verifying",
+    "resend": "Send a new code",
+    "resendIn": "Resend in {seconds}s",
+    "footnote": "Codes last 15 minutes and work once. Check your spam folder if nothing lands.",
+    "verifiedHeading": "You're in",
+    "verifiedBody": "Your address is confirmed and your account is active. Sign in and the survey is all yours.",
+    "needAccount": "Need an account?",
+    "needAccountLink": "Sign up here",
+    "editEmail": "Email"
   },
   "login": {
-    "title": "Welcome back",
-    "intro": "Pick up where you left off.",
+    "heading": "Sign in",
+    "intro": "Welcome back. Sign in to pick up where you left off.",
     "email": "Email",
-    "emailPlaceholder": "you@example.com",
     "password": "Password",
-    "passwordPlaceholder": "Your password",
-    "submit": "Log in",
-    "submitBusy": "Checking…",
     "noAccount": "No account yet?",
-    "signup": "Sign up"
+    "noAccountLink": "Sign up here",
+    "enterCode": "Enter your code",
+    "signedInHeading": "You're in",
+    "signedInBody": "Signed in and ready. The survey takes about two minutes.",
+    "startSurvey": "Start the survey"
   },
-  "survey": {
-    "stampTop": "Step",
-    "stampBottom": "Anonymous",
-    "progress": "{pct}% complete",
-    "next": "Next",
-    "back": "Back",
-    "q1": {
-      "kicker": "First up",
-      "question": "Which one's you?",
-      "helper": "This decides which questions we ask later, so pick the closest fit.",
-      "student": "Student",
-      "studentHint": "Studying here right now",
-      "tourist": "Tourist",
-      "touristHint": "Visiting Crete on holiday",
-      "local": "Local",
-      "localHint": "I live around Hersonissos"
-    },
-    "q2": {
-      "kicker": "Be honest",
-      "question": "How keen are you on a night like this?",
-      "helper": "1 is 'not my thing', 10 is 'tell me where to be'.",
-      "low": "Not really",
-      "high": "Already there"
-    },
-    "voted": {
-      "stamp": "DONE",
-      "title": "You're already in",
-      "body": "This account has submitted its answers. One account, one vote — that's how we keep the results honest."
-    },
-    "expired": {
-      "stamp": "AGAIN",
-      "title": "Session timed out",
-      "body": "Log back in and your answers will pick up from the top.",
-      "action": "Log in"
-    },
-    "preview": {
-      "stamp": "WIP",
-      "title": "That's the preview",
-      "body": "Fourteen more questions are on the way. So far: {audience}, keenness {interest}/10 — nothing has been sent to the server yet.",
-      "action": "Back to the start"
-    },
-    "statusStamp": "Status"
+  "gate": {
+    "heading": "Sign in first",
+    "body": "The survey is one response per account, so we need you signed in before you start.",
+    "createAccount": "Create an account"
+  },
+  "placeholders": {
+    "area": "e.g. Stalis",
+    "feedback": "Tell us what would make this worth your night out."
+  },
+  "done": {
+    "heading": "That's it",
+    "body": "Your answers are in. Thanks for helping shape the night.",
+    "confirmation": "Response submitted. It is stored with no link back to your account — we cannot tell which answers were yours."
   },
   "errors": {
-    "duplicate": "That email or phone is already registered.",
-    "invalid_credentials": "Those details don't match. Try again.",
-    "rate_limit": "Too many attempts. Wait a minute and retry.",
-    "network": "Can't reach the server. Check your connection.",
-    "generic": "Something went wrong."
+    "emailRequired": "Enter your email address.",
+    "emailInvalid": "Enter a valid email address.",
+    "phoneRequired": "Enter your phone number.",
+    "phoneInvalid": "Enter a valid phone number.",
+    "phoneDigits": "Phone number must contain between 7 and 15 digits.",
+    "passwordRequired": "Enter your password.",
+    "passwordShort": "Password must be at least {min} characters.",
+    "passwordLong": "Password must be at most 128 characters.",
+    "codeRequired": "Enter the code from your email.",
+    "codeFormat": "Enter the six-digit code from your email."
+  },
+  "survey": {
+    "audience_type": {
+      "eyebrow": "First up",
+      "title": "Which one's you?",
+      "description": "This decides which questions we ask later, so pick the closest fit.",
+      "options": {
+        "student": { "label": "Student", "description": "Studying here right now" },
+        "tourist": { "label": "Tourist", "description": "Visiting Crete on holiday" },
+        "local": { "label": "Local", "description": "I live around Hersonissos" }
+      }
+    },
+    "age_range": {
+      "eyebrow": "Optional",
+      "title": "How old are you?",
+      "options": {
+        "18-20": { "label": "18–20" },
+        "21-24": { "label": "21–24" },
+        "25-29": { "label": "25–29" },
+        "30_plus": { "label": "30 or over" }
+      }
+    },
+    "gender": {
+      "eyebrow": "About you",
+      "title": "How do you identify?",
+      "options": {
+        "male": { "label": "Male" },
+        "female": { "label": "Female" },
+        "other": { "label": "Other" }
+      }
+    },
+    "interest_level": {
+      "eyebrow": "Be honest",
+      "title": "How keen are you on a night like this?",
+      "description": "1 is 'not my thing', 10 is 'tell me where to be'.",
+      "lowLabel": "Not really",
+      "highLabel": "Already there"
+    },
+    "ticket_price_range": {
+      "eyebrow": "Money talk",
+      "title": "What would you pay?",
+      "description": "For a full night, with the lineup announced.",
+      "options": {
+        "10-20": { "label": "€10–20" },
+        "20-30": { "label": "€20–30" },
+        "30-40": { "label": "€30–40" },
+        "over_40": { "label": "Over €40" }
+      }
+    },
+    "genre_preferences": {
+      "eyebrow": "The sound",
+      "title": "What should we play?",
+      "description": "Pick as many as you like.",
+      "options": {
+        "greek-pop": { "label": "Greek pop" },
+        "hip-hop": { "label": "Hip-hop" },
+        "trap": { "label": "Trap" },
+        "r&b": { "label": "R&B" },
+        "reggaeton": { "label": "Reggaeton" },
+        "house": { "label": "House" },
+        "techno": { "label": "Techno" },
+        "laiko": { "label": "Laïkó" },
+        "rock": { "label": "Rock" }
+      }
+    },
+    "date_preference": {
+      "eyebrow": "The date",
+      "title": "When works best?",
+      "description": "The festival is planned for September.",
+      "options": {
+        "early-september": { "label": "Early September", "description": "First two weeks" },
+        "late-september": { "label": "Late September", "description": "Last two weeks" },
+        "weekend-only": { "label": "Any weekend", "description": "As long as it's Fri–Sun" },
+        "any": { "label": "Any date works" }
+      }
+    },
+    "start_time_preference": {
+      "eyebrow": "The clock",
+      "title": "What time should it kick off?",
+      "options": {
+        "20:00": { "label": "Around 20:00" },
+        "21:00": { "label": "Around 21:00" },
+        "22:00": { "label": "Around 22:00" },
+        "23:00_later": { "label": "23:00 or later" }
+      }
+    },
+    "group_size": {
+      "eyebrow": "The crew",
+      "title": "Who are you coming with?",
+      "options": {
+        "alone": { "label": "On my own" },
+        "2-3": { "label": "2–3 of us" },
+        "4-5": { "label": "4–5 of us" },
+        "6_plus": { "label": "6 or more" }
+      }
+    },
+    "recommend_likelihood": {
+      "eyebrow": "Word of mouth",
+      "title": "Would you tell a friend?",
+      "description": "How likely are you to recommend this to someone you know?",
+      "lowLabel": "Not likely",
+      "highLabel": "Definitely"
+    },
+    "food_stall_interest": {
+      "eyebrow": "The extras",
+      "title": "Want food stalls?",
+      "options": {
+        "yes": { "label": "Yes, feed me" },
+        "no": { "label": "Not fussed" }
+      }
+    },
+    "alcohol_preference": {
+      "eyebrow": "Optional",
+      "title": "What are you drinking?",
+      "options": {
+        "beer": { "label": "Beer" },
+        "wine": { "label": "Wine" },
+        "spirits": { "label": "Spirits / cocktails" },
+        "none": { "label": "Nothing alcoholic" },
+        "no-preference": { "label": "No preference" }
+      }
+    },
+    "transport_interest": {
+      "eyebrow": "Getting there",
+      "title": "Would you use shuttle transport?",
+      "note": "Transport is €2 flat for visitors. Students with a valid pass travel free.",
+      "options": {
+        "yes": { "label": "Yes" },
+        "maybe": { "label": "Maybe" },
+        "no": { "label": "No" }
+      }
+    },
+    "accommodation_area": {
+      "eyebrow": "Optional",
+      "title": "Where are you staying?",
+      "warning": "Optional, and worth thinking about: few people answer from any one area, so filling this in could make your response identifiable. Leave it blank and your answers stay anonymous."
+    },
+    "has_student_pass": {
+      "eyebrow": "Getting there",
+      "title": "Do you have a student transport pass?",
+      "note": "Students with a valid pass travel free. Everyone else pays €2 flat.",
+      "options": {
+        "yes": { "label": "Yes, I have one" },
+        "no": { "label": "No, I don't" }
+      }
+    },
+    "open_feedback": {
+      "eyebrow": "Last one",
+      "title": "Anything else?",
+      "description": "Artists you want, things we should avoid — all of it helps."
+    }
   }
 }

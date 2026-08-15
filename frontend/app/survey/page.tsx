@@ -1,134 +1,34 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { QuestionScreen } from "./QuestionScreen";
-import { AudienceStep } from "./steps/AudienceStep";
-import { InterestStep } from "./steps/InterestStep";
-import { GlassCard } from "@/app/components/GlassCard";
-import { StampBadge } from "@/app/components/StampBadge";
-import { useAuth } from "@/lib/auth-context";
-import { useI18n } from "@/lib/i18n";
-import * as api from "@/lib/api";
-import { emptyAnswers, type SurveyAnswers } from "@/lib/types";
+import { useMemo, useState } from "react";
 
-type Gate = "checking" | "open" | "voted" | "expired";
+import { errorMessage, isApiError, submitSurvey } from "@/lib/api";
+import { getAccessToken } from "@/lib/session";
+import {
+  buildPayload,
+  questionsFor,
+  TOTAL_QUESTIONS,
+  type Answers,
+  type AudienceType,
+  type Question,
+} from "@/lib/survey";
+import { useLang } from "@/components/LanguageProvider";
+import { questionCopy, type Dictionary } from "@/lib/i18n";
+import { ChoiceCard } from "../components/ChoiceCard";
+import { ChipGroup } from "../components/ChipGroup";
+import { Notice } from "../components/Field";
+import { GlassCard } from "../components/GlassCard";
+import { LocaleToggle } from "../components/LocaleToggle";
+import { PrimaryButton, GhostButton } from "../components/PrimaryButton";
+import { ProgressBar } from "../components/ProgressBar";
+import { ScaleGrid } from "../components/ScaleGrid";
+import { StampBadge } from "../components/StampBadge";
+import { TextArea } from "../components/TextArea";
 
-export default function SurveyPage() {
-  const router = useRouter();
-  const { token, setToken } = useAuth();
-  const { t } = useI18n();
-  const [gate, setGate] = useState<Gate>("checking");
-  const [step, setStep] = useState(1);
-  const [answers, setAnswers] = useState<SurveyAnswers>(emptyAnswers);
+const LETTERS = "ABCDEFGHI";
 
-  useEffect(() => {
-    // In-memory token: a hard refresh drops it, so send them back to log in.
-    if (!token) {
-      router.replace("/login");
-      return;
-    }
-    let active = true;
-    api
-      .hasVoted(token)
-      .then((voted) => active && setGate(voted ? "voted" : "open"))
-      .catch((err) => {
-        if (!active) return;
-        if (err instanceof api.ApiError && err.status === 401) {
-          setToken(null);
-          setGate("expired");
-        } else {
-          // Don't block the survey on a flaky has-voted check; /surveys/submit
-          // enforces the one-vote rule anyway (409).
-          setGate("open");
-        }
-      });
-    return () => {
-      active = false;
-    };
-  }, [token, router, setToken]);
-
-  const set = <K extends keyof SurveyAnswers>(key: K, v: SurveyAnswers[K]) =>
-    setAnswers((prev) => ({ ...prev, [key]: v }));
-
-  if (gate === "checking") return <Shell>{null}</Shell>;
-
-  if (gate === "voted") {
-    return (
-      <Shell>
-        <Notice
-          stamp={t("survey.voted.stamp")}
-          title={t("survey.voted.title")}
-          body={t("survey.voted.body")}
-        />
-      </Shell>
-    );
-  }
-
-  if (gate === "expired") {
-    return (
-      <Shell>
-        <Notice
-          stamp={t("survey.expired.stamp")}
-          title={t("survey.expired.title")}
-          body={t("survey.expired.body")}
-          action={{ href: "/login", label: t("survey.expired.action") }}
-        />
-      </Shell>
-    );
-  }
-
-  return (
-    <Shell>
-      {step === 1 && (
-        <QuestionScreen
-          step={1}
-          kicker={t("survey.q1.kicker")}
-          question={t("survey.q1.question")}
-          helper={t("survey.q1.helper")}
-          nextDisabled={answers.audience_type === null}
-          onNext={() => setStep(2)}
-        >
-          <AudienceStep
-            value={answers.audience_type}
-            onChange={(v) => set("audience_type", v)}
-          />
-        </QuestionScreen>
-      )}
-
-      {step === 2 && (
-        <QuestionScreen
-          step={2}
-          kicker={t("survey.q2.kicker")}
-          question={t("survey.q2.question")}
-          helper={t("survey.q2.helper")}
-          nextDisabled={answers.interest_level === null}
-          onNext={() => setStep(3)}
-          onBack={() => setStep(1)}
-        >
-          <InterestStep
-            value={answers.interest_level}
-            onChange={(v) => set("interest_level", v)}
-          />
-        </QuestionScreen>
-      )}
-
-      {step === 3 && (
-        <Notice
-          stamp={t("survey.preview.stamp")}
-          title={t("survey.preview.title")}
-          body={t("survey.preview.body", {
-            audience: t(`survey.q1.${answers.audience_type}`),
-            interest: answers.interest_level ?? "-",
-          })}
-          action={{ href: "/", label: t("survey.preview.action") }}
-        />
-      )}
-    </Shell>
-  );
-}
-
+/** Full-bleed gradient behind every survey screen. */
 function Shell({ children }: { children: React.ReactNode }) {
   return (
     <main className="fest-gradient fest-grain relative min-h-dvh">
@@ -138,37 +38,262 @@ function Shell({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Notice({
-  stamp,
-  title,
-  body,
-  action,
-}: {
-  stamp: string;
-  title: string;
-  body: string;
-  action?: { href: string; label: string };
-}) {
-  const { t } = useI18n();
+/**
+ * Survey wizard — one question per screen, with branch questions filtered in or out by the
+ * audience answered first.
+ *
+ * The whole response is submitted in a single call at the end, because the backend validates the
+ * conditional fields against each other and only accepts a complete payload.
+ */
+export default function SurveyPage() {
+  const { t } = useLang();
+  const [answers, setAnswers] = useState<Answers>({});
+  const [index, setIndex] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const audience = (answers.audience_type as AudienceType | undefined) ?? null;
+  const questions = useMemo(() => questionsFor(audience), [audience]);
+  const question = questions[Math.min(index, questions.length - 1)];
+  // Before an audience is chosen the list holds only the first question, which would otherwise
+  // make question one look like the final screen.
+  const isLast = audience !== null && index === questions.length - 1;
+  const copy = questionCopy(t, question.id);
+
+  const answer = answers[question.id];
+  const answered = Array.isArray(answer)
+    ? answer.length > 0
+    : answer !== undefined && answer !== null && answer !== "";
+  const canAdvance = question.optional || answered;
+
+  // Denominator stays at the full count until the audience narrows the path, so the counter never
+  // appears to jump backwards mid-run.
+  const total = audience ? questions.length : TOTAL_QUESTIONS;
+
+  function setAnswer(value: Answers[keyof Answers]) {
+    setAnswers((current) => ({ ...current, [question.id]: value }));
+  }
+
+  function toggleMulti(value: string) {
+    const current = (answers[question.id] as string[] | undefined) ?? [];
+    setAnswer(
+      current.includes(value)
+        ? current.filter((entry) => entry !== value)
+        : [...current, value]
+    );
+  }
+
+  async function handleNext() {
+    if (!isLast) {
+      setIndex((current) => current + 1);
+      return;
+    }
+
+    setSubmitting(true);
+    setError(null);
+    try {
+      await submitSurvey(buildPayload(answers));
+      setSubmitted(true);
+    } catch (caught) {
+      // "Already submitted" is a finished state, not a failure to retry.
+      if (isApiError(caught) && caught.status === "already_submitted") {
+        setSubmitted(true);
+        return;
+      }
+      setError(errorMessage(caught));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  // Submission needs a bearer token, so there is no point letting someone fill in fifteen screens
+  // and only then discover they are signed out.
+  if (!getAccessToken() && !submitted) {
+    return (
+      <Shell>
+        <div className="mx-auto flex min-h-dvh w-full max-w-lg items-center px-5 py-10">
+          <GlassCard className="w-full">
+            <p className="ticker text-[10px] text-gold">{t.eyebrows.login}</p>
+            <h2 className="display mt-3 text-4xl text-bone">{t.gate.heading}</h2>
+            <p className="mt-3 text-sm text-bone/70">{t.gate.body}</p>
+            <div className="mt-8 flex flex-col gap-3">
+              <Link href="/">
+                <PrimaryButton type="button">{t.common.signIn}</PrimaryButton>
+              </Link>
+              <Link href="/signup" className="text-center">
+                <GhostButton type="button" className="w-full">
+                  {t.gate.createAccount}
+                </GhostButton>
+              </Link>
+            </div>
+          </GlassCard>
+        </div>
+      </Shell>
+    );
+  }
+
+  if (submitted) {
+    return (
+      <Shell>
+        <div className="mx-auto flex min-h-dvh w-full max-w-lg items-center px-5 py-10">
+          <GlassCard className="w-full">
+            <div className="flex flex-col items-center gap-5 text-center">
+              <StampBadge
+                top={t.anon.badgeTop}
+                main={t.anon.badgeMid}
+                bottom={t.anon.badgeBottom}
+                tone="gold"
+              />
+              <div>
+                <h2 className="display text-4xl text-bone">{t.done.heading}</h2>
+                <p className="mt-3 text-sm text-bone/70">{t.done.body}</p>
+              </div>
+              <Notice tone="success">{t.done.confirmation}</Notice>
+            </div>
+          </GlassCard>
+        </div>
+      </Shell>
+    );
+  }
+
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-lg items-center px-5 py-10">
-      <GlassCard className="w-full">
-        <StampBadge
-          top={t("survey.statusStamp")}
-          main={stamp}
-          bottom={t("survey.stampBottom")}
-        />
-        <h2 className="display mt-6 text-4xl text-bone">{title}</h2>
-        <p className="mt-3 text-sm text-bone/70">{body}</p>
-        {action && (
-          <Link
-            href={action.href}
-            className="notch-sm display mt-8 flex min-h-14 w-full items-center justify-center bg-gold px-6 text-lg text-ink"
-          >
-            {action.label}
-          </Link>
-        )}
-      </GlassCard>
-    </div>
+    <Shell>
+      <div className="mx-auto flex min-h-dvh w-full max-w-lg flex-col px-5 pt-6 pb-8">
+        <LocaleToggle className="mb-6 self-end border-white/30 text-white" />
+
+        <ProgressBar step={index + 1} total={total} />
+
+        <GlassCard className="mt-6">
+          <p className="ticker text-[10px] text-gold">{copy.eyebrow}</p>
+          <h2 className="display mt-3 text-[clamp(1.75rem,7vw,2.5rem)] text-bone">{copy.title}</h2>
+          {copy.description && <p className="mt-3 text-sm text-bone/60">{copy.description}</p>}
+
+          <div className="mt-5 flex flex-col gap-3">
+            {error && <Notice tone="error">{error}</Notice>}
+            {copy.warning && <Notice tone="warning">{copy.warning}</Notice>}
+            {copy.note && <Notice tone="info">{copy.note}</Notice>}
+          </div>
+
+          <div className="mt-7">
+            <QuestionBody
+              question={question}
+              answers={answers}
+              t={t}
+              onSet={setAnswer}
+              onToggleMulti={toggleMulti}
+            />
+          </div>
+        </GlassCard>
+
+        <div className="mt-auto pt-8">
+          <PrimaryButton type="button" disabled={!canAdvance || submitting} onClick={handleNext}>
+            {isLast ? (submitting ? t.common.sending : t.common.submit) : t.common.next}
+          </PrimaryButton>
+
+          <div className="mt-2 flex justify-center gap-4">
+            {index > 0 && (
+              <GhostButton type="button" onClick={() => setIndex((current) => current - 1)}>
+                &larr; {t.common.back}
+              </GhostButton>
+            )}
+            {question.optional && !answered && (
+              <GhostButton type="button" onClick={handleNext}>
+                {t.common.skip}
+              </GhostButton>
+            )}
+          </div>
+        </div>
+      </div>
+    </Shell>
   );
+}
+
+function QuestionBody({
+  question,
+  answers,
+  t,
+  onSet,
+  onToggleMulti,
+}: {
+  question: Question;
+  answers: Answers;
+  t: Dictionary;
+  onSet: (value: Answers[keyof Answers]) => void;
+  onToggleMulti: (value: string) => void;
+}) {
+  const value = answers[question.id];
+  const copy = questionCopy(t, question.id);
+
+  switch (question.kind) {
+    case "single":
+      return (
+        <div className="flex flex-col gap-3">
+          {question.values.map((optionValue, position) => {
+            const option = copy.options?.[optionValue];
+            return (
+              <ChoiceCard
+                key={optionValue}
+                marker={LETTERS[position]}
+                label={option?.label ?? optionValue}
+                hint={option?.description}
+                selected={value === optionValue}
+                onSelect={() => onSet(optionValue)}
+              />
+            );
+          })}
+        </div>
+      );
+
+    case "bool":
+      return (
+        <div className="flex flex-col gap-3">
+          <ChoiceCard
+            marker="A"
+            label={copy.options?.yes.label ?? "Yes"}
+            selected={value === true}
+            onSelect={() => onSet(true)}
+          />
+          <ChoiceCard
+            marker="B"
+            label={copy.options?.no.label ?? "No"}
+            selected={value === false}
+            onSelect={() => onSet(false)}
+          />
+        </div>
+      );
+
+    case "scale":
+      return (
+        <ScaleGrid
+          value={(value as number | undefined) ?? null}
+          onChange={(score) => onSet(score)}
+          lowLabel={copy.lowLabel ?? ""}
+          highLabel={copy.highLabel ?? ""}
+        />
+      );
+
+    case "multi":
+      return (
+        <ChipGroup
+          options={question.values.map((optionValue) => ({
+            value: optionValue,
+            label: copy.options?.[optionValue]?.label ?? optionValue,
+          }))}
+          selected={(value as string[] | undefined) ?? []}
+          onToggle={onToggleMulti}
+        />
+      );
+
+    case "text":
+      return (
+        <TextArea
+          label={question.optional ? t.common.optional : t.common.yourAnswer}
+          value={(value as string | undefined) ?? ""}
+          onChange={(next) => onSet(next)}
+          placeholder={t.placeholders[question.placeholderKey]}
+          maxLength={question.maxLength}
+        />
+      );
+  }
 }

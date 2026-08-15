@@ -1,10 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 import { useLang } from "@/components/LanguageProvider";
-import { FestivalShell, InlineLink } from "@/components/ui";
-import { VerifyEmailForm } from "@/components/VerifyEmailForm";
+import { SplitLayout } from "../components/SplitLayout";
+import { VerifyCodeForm } from "../components/VerifyCodeForm";
 
 /**
  * Standalone entry point for anyone who closed the tab after signing up.
@@ -17,20 +18,27 @@ export default function VerifyPage() {
   const [verified, setVerified] = useState(false);
 
   return (
-    <FestivalShell
-      eyebrow={verified ? t.eyebrows.done : t.eyebrows.verify}
-      title={verified ? t.verify.verifiedHeading : t.verify.heading}
-      description={verified ? undefined : t.verify.intro}
-      footer={
-        verified ? undefined : (
-          <p className="text-center text-sm text-fest-cream/70">
-            {t.verify.needAccount}{" "}
-            <InlineLink href="/signup">{t.verify.needAccountLink}</InlineLink>
-          </p>
-        )
-      }
-    >
-      <VerifyEmailForm emailEditable onVerified={() => setVerified(true)} />
-    </FestivalShell>
+    <SplitLayout>
+      <p className="ticker text-[10px] text-gold">
+        {verified ? t.eyebrows.done : t.eyebrows.verify}
+      </p>
+      <h2 className="display mt-3 text-4xl text-bone">
+        {verified ? t.verify.verifiedHeading : t.verify.heading}
+      </h2>
+      {!verified && <p className="mt-3 text-sm text-bone/65">{t.verify.intro}</p>}
+
+      <div className="mt-8">
+        <VerifyCodeForm emailEditable onVerified={() => setVerified(true)} />
+      </div>
+
+      {!verified && (
+        <p className="mt-6 text-sm text-bone/60">
+          {t.verify.needAccount}{" "}
+          <Link href="/signup" className="font-semibold text-gold underline">
+            {t.verify.needAccountLink}
+          </Link>
+        </p>
+      )}
+    </SplitLayout>
   );
 }
