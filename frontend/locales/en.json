@@ -22,7 +22,11 @@
     "signOut": "Sign out",
     "signingOut": "Signing out",
     "loading": "Loading",
-    "profile": "Your pass"
+    "profile": "Your pass",
+    "show": "Show",
+    "hide": "Hide",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password"
   },
   "anon": {
     "badgeTop": "100%",

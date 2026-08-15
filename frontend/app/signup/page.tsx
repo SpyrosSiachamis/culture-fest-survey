@@ -8,7 +8,7 @@ import { PASSWORD_MIN_LENGTH, makeValidators } from "@/lib/validation";
 import { useLang } from "@/components/LanguageProvider";
 import { format } from "@/lib/i18n";
 import { SplitLayout } from "../components/SplitLayout";
-import { Field, Notice } from "../components/Field";
+import { Field, Notice, PasswordField } from "../components/Field";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { VerifyCodeForm } from "../components/VerifyCodeForm";
 
@@ -115,10 +115,9 @@ export default function SignupPage() {
           onChange={(event) => setPhone(event.target.value)}
         />
 
-        <Field
+        <PasswordField
           id="password"
           label={t.signup.password}
-          type="password"
           autoComplete="new-password"
           value={password}
           error={fieldErrors.password}

@@ -22,7 +22,11 @@
     "signOut": "Αποσύνδεση",
     "signingOut": "Αποσύνδεση",
     "loading": "Φόρτωση",
-    "profile": "Το πάσο σου"
+    "profile": "Το πάσο σου",
+    "show": "Δείξε",
+    "hide": "Κρύψε",
+    "showPassword": "Εμφάνιση κωδικού",
+    "hidePassword": "Απόκρυψη κωδικού"
   },
   "anon": {
     "badgeTop": "100%",

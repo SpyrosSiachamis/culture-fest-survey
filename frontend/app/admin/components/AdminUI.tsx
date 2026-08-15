@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * The dashboard's building blocks.
  *
@@ -9,6 +11,10 @@
  * Surfaces are the text colour at 3% rather than a lighter grey, so a panel on a panel stays inside
  * the palette instead of inventing a sixth value.
  */
+
+import { useState } from "react";
+
+import { useLang } from "@/components/LanguageProvider";
 
 export function Panel({
   children,
@@ -120,6 +126,44 @@ export function SegmentedControl<T extends string>({
   );
 }
 
+// Shared so the plain and the password field cannot drift apart. 16px type so iOS Safari does not
+// zoom the viewport when the field takes focus.
+const ADM_INPUT =
+  "min-h-11 w-full rounded-sm border border-adm-line bg-transparent px-3 text-base text-adm-text outline-none transition-colors placeholder:text-adm-muted/60 focus:border-adm-accent disabled:opacity-50";
+
+function FieldFrame({
+  id,
+  label,
+  hint,
+  error,
+  children,
+}: {
+  id: string;
+  label: string;
+  hint?: string;
+  error?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <label htmlFor={id} className="block text-xs text-adm-muted">
+        {label}
+      </label>
+      {children}
+      {error ? (
+        <p
+          id={`${id}-error`}
+          className="mt-1.5 text-xs text-adm-text underline decoration-adm-accent underline-offset-4"
+        >
+          {error}
+        </p>
+      ) : (
+        hint && <p className="mt-1.5 text-xs text-adm-muted">{hint}</p>
+      )}
+    </div>
+  );
+}
+
 export function AdmField({
   id,
   label,
@@ -133,26 +177,63 @@ export function AdmField({
   error?: string;
 }) {
   return (
-    <div>
-      <label htmlFor={id} className="block text-xs text-adm-muted">
-        {label}
-      </label>
+    <FieldFrame id={id} label={label} hint={hint} error={error}>
       <input
         id={id}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? `${id}-error` : undefined}
-        // 16px so iOS Safari does not zoom the viewport when the field takes focus.
-        className="mt-1.5 min-h-11 w-full rounded-sm border border-adm-line bg-transparent px-3 text-base text-adm-text outline-none transition-colors placeholder:text-adm-muted/60 focus:border-adm-accent disabled:opacity-50"
+        className={`mt-1.5 ${ADM_INPUT}`}
         {...props}
       />
-      {error ? (
-        <p id={`${id}-error`} className="mt-1.5 text-xs text-adm-text underline decoration-adm-accent underline-offset-4">
-          {error}
-        </p>
-      ) : (
-        hint && <p className="mt-1.5 text-xs text-adm-muted">{hint}</p>
-      )}
-    </div>
+    </FieldFrame>
+  );
+}
+
+/** Password entry with a reveal toggle. See `PasswordField` in app/components/Field.tsx. */
+export function AdmPasswordField({
+  id,
+  label,
+  hint,
+  error,
+  ...props
+}: Omit<React.InputHTMLAttributes<HTMLInputElement>, "type"> & {
+  id: string;
+  label: string;
+  hint?: string;
+  error?: string;
+}) {
+  const { t } = useLang();
+  const [revealed, setRevealed] = useState(false);
+
+  return (
+    <FieldFrame id={id} label={label} hint={hint} error={error}>
+      <div className="relative mt-1.5">
+        <input
+          id={id}
+          type={revealed ? "text" : "password"}
+          // Revealed, this is a plain text field to the OS keyboard, which would otherwise
+          // capitalise and autocorrect it. Off on both types, so the toggle cannot change what is
+          // actually typed.
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? `${id}-error` : undefined}
+          className={`${ADM_INPUT} pr-20`}
+          {...props}
+        />
+        <button
+          type="button"
+          onClick={() => setRevealed((current) => !current)}
+          aria-controls={id}
+          aria-pressed={revealed}
+          aria-label={revealed ? t.common.hidePassword : t.common.showPassword}
+          className="absolute inset-y-0 right-0 flex cursor-pointer items-center whitespace-nowrap px-3 text-xs text-adm-muted transition-colors hover:text-adm-text"
+        >
+          {revealed ? t.common.hide : t.common.show}
+        </button>
+      </div>
+    </FieldFrame>
   );
 }
 

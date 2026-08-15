@@ -8,7 +8,7 @@ import { makeValidators } from "@/lib/validation";
 import { useAuth } from "@/components/AuthProvider";
 import { useLang } from "@/components/LanguageProvider";
 import { SplitLayout } from "./components/SplitLayout";
-import { Field, Notice } from "./components/Field";
+import { Field, Notice, PasswordField } from "./components/Field";
 import { PrimaryButton, GhostButton } from "./components/PrimaryButton";
 
 /** Sign-in is the front door: `/` renders it directly, and `/login` redirects here. */
@@ -133,10 +133,9 @@ export default function HomePage() {
           onChange={(event) => setEmail(event.target.value)}
         />
 
-        <Field
+        <PasswordField
           id="password"
           label={t.login.password}
-          type="password"
           autoComplete="current-password"
           value={password}
           error={fieldErrors.password}

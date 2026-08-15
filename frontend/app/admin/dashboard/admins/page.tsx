@@ -30,6 +30,7 @@ import {
   AdmButton,
   AdmField,
   AdmNotice,
+  AdmPasswordField,
   EmptyState,
   Panel,
   PanelHeading,
@@ -211,10 +212,9 @@ export default function AdminsPage() {
             onChange={(event) => setPhone(event.target.value)}
           />
 
-          <AdmField
+          <AdmPasswordField
             id="admin-password"
             label={t.signup.password}
-            type="password"
             autoComplete="new-password"
             value={password}
             error={fieldErrors.password}
