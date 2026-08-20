@@ -3,6 +3,7 @@ import { Archivo, Archivo_Black, Geist, Geist_Mono, Noto_Sans_Display } from "ne
 import "./globals.css";
 import { AuthProvider } from "@/components/AuthProvider";
 import { LanguageProvider } from "@/components/LanguageProvider";
+import { SiteFooter } from "./components/SiteFooter";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -55,7 +56,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col">
         <LanguageProvider>
+          {/* The footer is a sibling of the page, not a child of it: body is the flex column, so
+              the page keeps its own full-height shell and the footer lands underneath whatever
+              that shell ends up being. It needs the translations but not the session. */}
           <AuthProvider>{children}</AuthProvider>
+          <SiteFooter />
         </LanguageProvider>
       </body>
     </html>
