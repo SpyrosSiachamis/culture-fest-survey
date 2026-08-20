@@ -19,7 +19,11 @@ import { useLang } from "@/components/LanguageProvider";
 export function SplitLayout({ children }: { children: React.ReactNode }) {
   const { t } = useLang();
   // The wordmark is set on two lines like the poster. The brand name stays Latin in both locales.
-  const wordmarkLines = t.brand.name.split(" ");
+  const name = t.brand.name;
+  const firstSpace = name.indexOf(" ");
+  const wordmarkLines = firstSpace !== -1 
+    ? [name.slice(0, firstSpace), name.slice(firstSpace + 1)] 
+    : [name];
 
   return (
     // bg-ink on the root, not just the form panel: the diagonal clip on .split-brand cuts a wedge
