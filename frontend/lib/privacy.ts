@@ -48,7 +48,7 @@ const en: Policy = {
   updated: "20 August 2026",
   status: "Draft for review",
   intro:
-    "This Privacy Policy explains how the Culture Fest Project Team handles information collected " +
+    "This Privacy Policy explains how the Project Team handles information collected " +
     "through the Culture Fest website, account system, and survey.",
   sections: [
     {
@@ -57,7 +57,7 @@ const en: Policy = {
       blocks: [
         {
           kind: "p",
-          text: "The Culture Fest website and survey are operated by the Culture Fest Project Team.",
+          text: "The Culture Fest website and survey are operated by the Project Team.",
         },
         {
           kind: "p",
@@ -74,7 +74,7 @@ const en: Policy = {
           kind: "p",
           text:
             "The privacy contact receives privacy-related requests and coordinates with the " +
-            "Culture Fest Project Team where necessary.",
+            "Project Team where necessary.",
         },
       ],
     },
@@ -174,7 +174,7 @@ const en: Policy = {
           kind: "p",
           text:
             "The Culture Fest survey is being used as a trial run for the festival. Its purpose is " +
-            "to help the Culture Fest Project Team understand attendee preferences, evaluate the " +
+            "to help the Project Team understand attendee preferences, evaluate the " +
             "event, and develop the Culture Fest brand and future events.",
         },
         { kind: "p", text: "Information may be used to:" },
@@ -200,7 +200,7 @@ const en: Policy = {
         {
           kind: "p",
           text:
-            "Survey information is intended for internal use by the Culture Fest Project Team and " +
+            "Survey information is intended for internal use by the Project Team and " +
             "is not intended to be shared with people outside the project team for their own " +
             "purposes.",
         },
@@ -245,7 +245,7 @@ const en: Policy = {
         {
           kind: "p",
           text:
-            "Survey responses are intended for internal use by the Culture Fest Project Team.",
+            "Survey responses are intended for internal use by the Project Team.",
         },
         {
           kind: "p",
@@ -420,7 +420,7 @@ const en: Policy = {
         {
           kind: "contact",
           rows: [
-            { label: "Team", value: "Culture Fest Project Team" },
+            { label: "Team", value: "The Project Team" },
             { label: "Privacy Contact", value: "Spyridon Siachamis" },
             { label: "Privacy Email", value: PRIVACY_EMAIL, href: PRIVACY_MAILTO },
             { label: "Website", value: WEBSITE, href: WEBSITE },
@@ -435,7 +435,7 @@ const el: Policy = {
   updated: "20 Αυγούστου 2026",
   status: "Προσχέδιο προς αναθεώρηση",
   intro:
-    "Η παρούσα Πολιτική Απορρήτου εξηγεί πώς η Ομάδα Έργου του Culture Fest διαχειρίζεται τις " +
+    "Η παρούσα Πολιτική Απορρήτου εξηγεί πώς η Ομάδα Έργου διαχειρίζεται τις " +
     "πληροφορίες που συλλέγονται μέσω του ιστότοπου, του συστήματος λογαριασμών και της έρευνας " +
     "του Culture Fest.",
   sections: [
@@ -446,8 +446,7 @@ const el: Policy = {
         {
           kind: "p",
           text:
-            "Ο ιστότοπος και η έρευνα του Culture Fest λειτουργούν από την Ομάδα Έργου του " +
-            "Culture Fest.",
+            "Ο ιστότοπος και η έρευνα του Culture Fest λειτουργούν από την Ομάδα Έργου.",
         },
         {
           kind: "p",
@@ -466,7 +465,7 @@ const el: Policy = {
           kind: "p",
           text:
             "Ο υπεύθυνος απορρήτου λαμβάνει τα αιτήματα που αφορούν το απόρρητο και συνεργάζεται " +
-            "με την Ομάδα Έργου του Culture Fest όπου χρειάζεται.",
+            "με την Ομάδα Έργου όπου χρειάζεται.",
         },
       ],
     },
@@ -573,7 +572,7 @@ const el: Policy = {
           kind: "p",
           text:
             "Η έρευνα του Culture Fest χρησιμοποιείται ως δοκιμαστική εφαρμογή για το φεστιβάλ. " +
-            "Σκοπός της είναι να βοηθήσει την Ομάδα Έργου του Culture Fest να κατανοήσει τις " +
+            "Σκοπός της είναι να βοηθήσει την Ομάδα Έργου να κατανοήσει τις " +
             "προτιμήσεις του κοινού, να αξιολογήσει την εκδήλωση και να αναπτύξει τη μάρκα " +
             "Culture Fest και μελλοντικές εκδηλώσεις.",
         },
@@ -600,9 +599,8 @@ const el: Policy = {
         {
           kind: "p",
           text:
-            "Τα στοιχεία της έρευνας προορίζονται για εσωτερική χρήση από την Ομάδα Έργου του " +
-            "Culture Fest και δεν προορίζονται να κοινοποιηθούν σε άτομα εκτός της ομάδας για " +
-            "δικούς τους σκοπούς.",
+            "Τα στοιχεία της έρευνας προορίζονται για εσωτερική χρήση από την Ομάδα Έργου και " +
+            "δεν προορίζονται να κοινοποιηθούν σε άτομα εκτός της ομάδας για δικούς τους σκοπούς.",
         },
       ],
     },
@@ -646,8 +644,7 @@ const el: Policy = {
         {
           kind: "p",
           text:
-            "Οι απαντήσεις της έρευνας προορίζονται για εσωτερική χρήση από την Ομάδα Έργου του " +
-            "Culture Fest.",
+            "Οι απαντήσεις της έρευνας προορίζονται για εσωτερική χρήση από την Ομάδα Έργου.",
         },
         {
           kind: "p",
@@ -828,7 +825,7 @@ const el: Policy = {
         {
           kind: "contact",
           rows: [
-            { label: "Ομάδα", value: "Culture Fest Project Team" },
+            { label: "Ομάδα", value: "The Project Team" },
             { label: "Υπεύθυνος απορρήτου", value: "Spyridon Siachamis" },
             { label: "Email απορρήτου", value: PRIVACY_EMAIL, href: PRIVACY_MAILTO },
             { label: "Ιστότοπος", value: WEBSITE, href: WEBSITE },

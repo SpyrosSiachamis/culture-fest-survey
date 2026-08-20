@@ -127,7 +127,8 @@
   },
   "footer": {
     "privacy": "Πολιτική Απορρήτου",
-    "team": "Ομάδα Έργου Culture Fest",
+    "team": "Η Ομάδα Έργου",
+    "developedBy": "Developed by {name}",
     "label": "Πληροφορίες ιστότοπου"
   },
   "privacy": {

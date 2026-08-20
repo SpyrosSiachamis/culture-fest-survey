@@ -5,6 +5,11 @@ import { usePathname } from "next/navigation";
 
 import { useLang } from "@/components/LanguageProvider";
 
+/** Credited in both locales; the name itself is a proper noun and is not translated. */
+const DEVELOPER = "Spyridon Siachamis";
+
+const DEVELOPER_URL = "https://www.linkedin.com/in/spyridon-siachamis-578793290/";
+
 /**
  * The one footer, mounted once in the root layout so every public screen carries it.
  *
@@ -34,7 +39,12 @@ export function SiteFooter() {
       <div className="h-px w-full bg-linear-to-r from-gold/70 via-magenta/50 to-violet/60" />
 
       <div className="mx-auto flex w-full max-w-5xl flex-col items-center gap-4 px-5 py-7 sm:flex-row sm:justify-between">
-        <p className="ticker text-[10px] text-bone/45">{t.footer.team}</p>
+        <div className="flex flex-col items-center gap-1 sm:items-start">
+          <p className="ticker text-[10px] text-bone/45">{t.footer.team}</p>
+          <p className="text-[11px] text-bone/45">
+            <Credit template={t.footer.developedBy} />
+          </p>
+        </div>
 
         <Link
           href="/privacy"
@@ -43,9 +53,34 @@ export function SiteFooter() {
           {t.footer.privacy}
         </Link>
       </div>
-      <div className="absolute bottom-0 left-0 h-px w-full bg-linear-to-r from-gold/70 via-magenta/50 to-violet/60" >
-        <p className="ticker text-[10px] text-bone/45">{t.footer_developed.developedBy}</p>
-      </div>
     </footer>
+  );
+}
+
+/**
+ * "Developed by {name}", with the name linked to the developer's profile.
+ *
+ * `format()` from lib/i18n is no use here: it returns a flat string, and the name has to be an
+ * element. Splitting the template on the placeholder keeps the surrounding words translatable and
+ * lets each locale put the name where its grammar wants it.
+ */
+function Credit({ template }: { template: string }) {
+  const [before, after = ""] = template.split("{name}");
+
+  return (
+    <>
+      {before}
+      <a
+        href={DEVELOPER_URL}
+        target="_blank"
+        // noreferrer alongside noopener: the target is a personal profile, and there is no reason to
+        // tell it which page the visitor came from.
+        rel="noopener noreferrer"
+        className="text-bone/70 underline underline-offset-2 transition-colors hover:text-gold"
+      >
+        {DEVELOPER}
+      </a>
+      {after}
+    </>
   );
 }

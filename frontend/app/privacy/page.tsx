@@ -10,7 +10,7 @@ import { PrivacyScreen } from "../components/PrivacyScreen";
 export const metadata: Metadata = {
   title: "Privacy Policy · Culture Fest 2026",
   description:
-    "How the Culture Fest Project Team handles information collected through the Culture Fest website, account system, and survey.",
+    "How the Project Team handles information collected through the Culture Fest website, account system, and survey.",
 };
 
 export default function PrivacyPage() {
