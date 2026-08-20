@@ -4,11 +4,19 @@ from starlette import status
 import datetime as dt
 from src.database.models import Account, EmailVerificationCode
 from src.database.session import get_db
-from src.email_service import send_account_exists_email, send_verification_email
+from src.email_service import (
+    send_account_exists_email,
+    send_password_reset_email,
+    send_verification_email,
+)
 from src.rate_limit import limiter
 from src.schemas import (
     AccountCreate,
     AccountRead,
+    PasswordResetAccepted,
+    PasswordResetConfirm,
+    PasswordResetRequest,
+    PasswordResetResult,
     ProfileRead,
     RedemptionRead,
     RedemptionStatusRead,
@@ -30,6 +38,12 @@ from src.auth import (
     hash_identifier,
     set_session_cookie,
     verify_password,
+)
+from src.password_reset import (
+    RESET_TOKEN_TTL_MINUTES,
+    create_password_reset_token,
+    decode_password_reset_token,
+    reset_link,
 )
 from src.redemption import create_redemption_token
 from src.schemas import LoginRequest
@@ -56,6 +70,17 @@ _INVALID_CODE_MESSAGE = "That code is not valid. Check the code and try again."
 
 _RESEND_ACCEPTED_MESSAGE = (
     "If this email address is awaiting verification, a new code has been sent to it."
+)
+
+_PASSWORD_RESET_ACCEPTED_MESSAGE = (
+    "If an account exists for this email address, a reset link has been sent to it."
+)
+
+# One answer for every way a reset link can fail: forged, tampered with, expired, already used, or
+# naming an account that no longer exists. Telling them apart would let someone probing the endpoint
+# learn whether they had guessed a real token.
+_INVALID_RESET_TOKEN_MESSAGE = (
+    "That reset link is invalid or has expired. Request a new one to continue."
 )
 
 
@@ -326,3 +351,79 @@ def has_voted(account: Account = Depends(get_current_verified_user)):
     # place, so it has no meaningful answer here, and using the same guard keeps every /me route on
     # one authorisation rule rather than a subtly weaker one for this one.
     return account.has_voted
+
+
+@router.post(
+    "/password-reset/request",
+    response_model=PasswordResetAccepted,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+@limiter.limit("3/minute")
+def request_password_reset(
+    request: Request,
+    payload: PasswordResetRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    """Email a reset link to the address, if it has an account.
+
+    The response is constant, and deliberately so in three separate ways:
+
+    * **Same body and status** whether or not an account was found, so the endpoint cannot be used
+      to discover which addresses are registered.
+    * **Same work done.** The hash and the lookup run before the branch, not inside it, so a
+      no-match answer costs the same peppered SHA-256 and the same indexed query as a match. A
+      short-circuit "return early if not found" would leave a timing difference that leaks exactly
+      what the constant message is there to hide.
+    * **Same response time.** The mail goes out in a background task, after the response, so the
+      round trip never includes a call to Resend that only happens on one branch.
+
+    Email only. A phone number is a valid login identifier elsewhere, but there is no channel here
+    to deliver a link over, so ``phone_hash`` is not consulted.
+    """
+    email_hash = hash_identifier(payload.email)
+    account = db.query(Account).filter(Account.email_hash == email_hash).first()
+
+    if account is not None:
+        token = create_password_reset_token(account)
+        background_tasks.add_task(
+            send_password_reset_email,
+            payload.email,
+            reset_link(token),
+            RESET_TOKEN_TTL_MINUTES,
+        )
+
+    return PasswordResetAccepted(message=_PASSWORD_RESET_ACCEPTED_MESSAGE)
+
+
+@router.post("/password-reset/confirm", response_model=PasswordResetResult)
+@limiter.limit("10/minute")
+def confirm_password_reset(
+    request: Request,
+    payload: PasswordResetConfirm,
+    db: Session = Depends(get_db),
+):
+    """Set a new password, given a valid reset link.
+
+    The token is the proof of ownership — the same role the emailed verification code plays at
+    signup — so no current password is asked for. It is single-use: it carries a fingerprint of the
+    password hash it was minted against, and writing a new hash here invalidates it along with every
+    other link outstanding for this account. See src/password_reset.py.
+    """
+    account = decode_password_reset_token(payload.token, db)
+
+    if account is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "status": "invalid_reset_token",
+                "message": _INVALID_RESET_TOKEN_MESSAGE,
+            },
+        )
+
+    account.hashed_password = get_password_hash(payload.new_password)
+    db.commit()
+
+    return PasswordResetResult(
+        message="Your password has been changed. You can now sign in with it."
+    )
