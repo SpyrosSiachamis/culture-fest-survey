@@ -47,12 +47,15 @@ function Shell({ children }: { children: React.ReactNode }) {
  */
 export default function SurveyPage() {
   const { t } = useLang();
-  const { status, initialising, refresh } = useAuth();
+  const { profile, status, initialising, refresh } = useAuth();
   const [answers, setAnswers] = useState<Answers>({});
   const [index, setIndex] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const alreadyVoted = profile?.has_voted ?? false;
+  const isDone = submitted || alreadyVoted;
 
   const audience = (answers.audience_type as AudienceType | undefined) ?? null;
   const questions = useMemo(() => questionsFor(audience), [audience]);
@@ -113,7 +116,7 @@ export default function SurveyPage() {
 
   // Wait for the session check before deciding anything. Without this, a reload mid-survey would
   // show the sign-in gate for a moment to someone who is perfectly well signed in.
-  if (initialising && !submitted) {
+  if (initialising && !isDone) {
     return (
       <Shell>
         <div className="mx-auto flex min-h-dvh w-full max-w-lg items-center px-5 py-10">
@@ -130,7 +133,7 @@ export default function SurveyPage() {
 
   // Submission requires a live session, so there is no point letting someone fill in fifteen
   // screens and only then discover they are signed out.
-  if (status !== "authenticated" && !submitted) {
+  if (status !== "authenticated" && !isDone) {
     return (
       <Shell>
         <div className="mx-auto flex min-h-dvh w-full max-w-lg items-center px-5 py-10">
@@ -154,7 +157,7 @@ export default function SurveyPage() {
     );
   }
 
-  if (submitted) {
+  if (isDone) {
     return (
       <Shell>
         <div className="mx-auto flex min-h-dvh w-full max-w-lg items-center px-5 py-10">
@@ -167,10 +170,16 @@ export default function SurveyPage() {
                 tone="gold"
               />
               <div>
-                <h2 className="display text-4xl text-bone">{t.done.heading}</h2>
-                <p className="mt-3 text-sm text-bone/70">{t.done.body}</p>
+                <h2 className="display text-4xl text-bone">
+                  {submitted ? t.done.heading : t.already.heading}
+                </h2>
+                <p className="mt-3 text-sm text-bone/70">
+                  {submitted ? t.done.body : t.already.body}
+                </p>
               </div>
-              <Notice tone="success">{t.done.confirmation}</Notice>
+              <Notice tone="success">
+                {submitted ? t.done.confirmation : t.already.notice}
+              </Notice>
               <Link href="/profile" className="w-full">
                 <PrimaryButton type="button">{t.common.profile}</PrimaryButton>
               </Link>

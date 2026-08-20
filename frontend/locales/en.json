@@ -1,8 +1,8 @@
 {
   "brand": {
-    "place": "Hersonissos · Crete",
-    "name": "Culture Fest",
-    "tagline": ["Music", "Lineup", "Nights", "You"]
+    "place": "Hersonissos · Crete · DIO Beach Club",
+    "name": "Culture Fest 2026",
+    "tagline": ["HIPHOP", "TRAP", "RNB", "WHITE GIRL MUSIC"]
   },
   "common": {
     "next": "Next",
@@ -123,15 +123,14 @@
     "privacy": "Your pass proves only that this account voted. It carries no name, no email and none of your answers.",
     "gateBody": "Your pass and your account details live behind sign-in, so only you can see them.",
     "loadError": "Could not load your account. Check your connection and try again.",
-    "retry": "Try again",
-    "backToSurvey": "Back to the survey"
+    "retry": "Try again"
   },
   "notFound": {
-    "title": "Not found · Culture Fest",
+    "title": "Not found · Culture Fest 2026",
     "eyebrow": "Error",
     "heading": "This page could not be found.",
     "body": "The address may be mistyped, or the page may have moved. Everything else is where you left it.",
-    "home": "Go to Culture Fest"
+    "home": "Go to Culture Fest 2026"
   },
   "admin": {
     "title": "Culture Fest Admin",
@@ -262,6 +261,11 @@
   "placeholders": {
     "area": "e.g. Stalis",
     "feedback": "Tell us what would make this worth your night out."
+  },
+  "already": {
+    "heading": "You've already answered",
+    "body": "This account's response is in, and it is one response per account.",
+    "notice": "There is nothing left to fill in. Your door pass is waiting on your pass page."
   },
   "done": {
     "heading": "That's it",
