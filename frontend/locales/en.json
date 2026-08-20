@@ -16,8 +16,6 @@
     "yourAnswer": "Your answer",
     "stepOf": "{current}/{total}",
     "percentComplete": "{percent}% complete",
-    "anonymous": "Anonymous",
-    "noAnswerLinked": "No answer is linked to you",
     "step": "Step",
     "signOut": "Sign out",
     "signingOut": "Signing out",
@@ -32,7 +30,8 @@
     "badgeTop": "100%",
     "badgeMid": "Anon",
     "badgeBottom": "No names",
-    "blurb": "Your answers are never linked back to your account. Not by ID, not by email — by nothing at all."
+    "blurb": "Your answers are never linked back to your account. Not by ID, not by email — by nothing at all.",
+    "preSubmit": "Before you send: your answers are stored with no link to your account. Nobody can tell which ones were yours."
   },
   "eyebrows": {
     "signup": "Create account",
@@ -285,7 +284,7 @@
     "audience_type": {
       "eyebrow": "First up",
       "title": "Which one's you?",
-      "description": "This decides which questions we ask later, so pick the closest fit.",
+      "description": "Pick the closest fit — it sets what we ask next.",
       "options": {
         "student": { "label": "Student", "description": "Studying here right now" },
         "tourist": { "label": "Tourist", "description": "Visiting Crete on holiday" },
@@ -321,49 +320,23 @@
     "ticket_price_range": {
       "eyebrow": "Money talk",
       "title": "What would you pay?",
-      "description": "For a full night, with the lineup announced.",
+      "description": "For a full night, lineup announced.",
       "options": {
-        "10-20": { "label": "€10–20" },
-        "20-30": { "label": "€20–30" },
-        "30-40": { "label": "€30–40" },
-        "over_40": { "label": "Over €40" }
-      }
-    },
-    "genre_preferences": {
-      "eyebrow": "The sound",
-      "title": "What should we play?",
-      "description": "Pick as many as you like.",
-      "options": {
-        "greek-pop": { "label": "Greek pop" },
-        "hip-hop": { "label": "Hip-hop" },
-        "trap": { "label": "Trap" },
-        "r&b": { "label": "R&B" },
-        "reggaeton": { "label": "Reggaeton" },
-        "house": { "label": "House" },
-        "techno": { "label": "Techno" },
-        "laiko": { "label": "Laïkó" },
-        "rock": { "label": "Rock" }
+        "10-20": { "label": "€10 to €20" },
+        "20-30": { "label": "€20 to €30" },
+        "30-40": { "label": "€30 to €40" },
+        "40-50": { "label": "€40 to €50" }
       }
     },
     "date_preference": {
       "eyebrow": "The date",
       "title": "When works best?",
-      "description": "The festival is planned for September.",
+      "description": "Late September into early October.",
       "options": {
-        "early-september": { "label": "Early September", "description": "First two weeks" },
-        "late-september": { "label": "Late September", "description": "Last two weeks" },
-        "weekend-only": { "label": "Any weekend", "description": "As long as it's Fri–Sun" },
-        "any": { "label": "Any date works" }
-      }
-    },
-    "start_time_preference": {
-      "eyebrow": "The clock",
-      "title": "What time should it kick off?",
-      "options": {
-        "20:00": { "label": "Around 20:00" },
-        "21:00": { "label": "Around 21:00" },
-        "22:00": { "label": "Around 22:00" },
-        "23:00_later": { "label": "23:00 or later" }
+        "sep-24-27": { "label": "24 to 27 September" },
+        "sep-28-oct-1": { "label": "28 September to 1 October" },
+        "oct-2-7": { "label": "2 to 7 October" },
+        "any": { "label": "Any date works", "description": "All three suit me" }
       }
     },
     "group_size": {
@@ -379,7 +352,6 @@
     "recommend_likelihood": {
       "eyebrow": "Word of mouth",
       "title": "Would you tell a friend?",
-      "description": "How likely are you to recommend this to someone you know?",
       "lowLabel": "Not likely",
       "highLabel": "Definitely"
     },
@@ -389,17 +361,6 @@
       "options": {
         "yes": { "label": "Yes, feed me" },
         "no": { "label": "Not fussed" }
-      }
-    },
-    "alcohol_preference": {
-      "eyebrow": "Optional",
-      "title": "What are you drinking?",
-      "options": {
-        "beer": { "label": "Beer" },
-        "wine": { "label": "Wine" },
-        "spirits": { "label": "Spirits / cocktails" },
-        "none": { "label": "Nothing alcoholic" },
-        "no-preference": { "label": "No preference" }
       }
     },
     "transport_interest": {
@@ -415,7 +376,7 @@
     "accommodation_area": {
       "eyebrow": "Optional",
       "title": "Where are you staying?",
-      "warning": "Optional, and worth thinking about: few people answer from any one area, so filling this in could make your response identifiable. Leave it blank and your answers stay anonymous."
+      "warning": "Few people answer from any one area, so this could make your response identifiable. Leave it blank to stay anonymous."
     },
     "has_student_pass": {
       "eyebrow": "Getting there",
@@ -429,7 +390,7 @@
     "open_feedback": {
       "eyebrow": "Last one",
       "title": "Anything else?",
-      "description": "Artists you want, things we should avoid — all of it helps."
+      "description": "Artists you want, things to avoid — all of it helps."
     }
   }
 }

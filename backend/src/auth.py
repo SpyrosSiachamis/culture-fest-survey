@@ -46,8 +46,10 @@ AUTH_COOKIE_SECURE = os.getenv("AUTH_COOKIE_SECURE", "false").strip().lower() ==
 #
 # It holds in both deployments because "site" means the registrable domain, not the origin:
 #
-#   dev   localhost:3000 -> localhost:5000            same site (a port is not part of a site)
-#   prod  culturefest.gr -> api.culturefest.gr        same site (both are culturefest.gr)
+#   dev   localhost:3000 -> localhost:5000
+#         same site — a port is not part of a site
+#   prod  culturefestgreece.gr -> api.culturefestgreece.gr
+#         same site — both are culturefestgreece.gr
 #
 # Different origins in both cases, which is why CORS and `credentials: "include"` are still needed;
 # same site in both, which is why a Lax cookie is still sent. Nothing about the production split

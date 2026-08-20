@@ -90,7 +90,7 @@ works too — and, like a paper ticket, is shareable; `has_redeemed` is what sto
    third-party: `SameSite=lax` will not send it, and `none` + `Secure` still gets blocked outright
    by iOS Safari's tracking prevention. On a phone-first festival audience that is most users.
    Two safe shapes:
-   - same registrable domain — `culturefest.gr` + `api.culturefest.gr`, keep `lax`; or
+   - same registrable domain — `culturefestgreece.gr` + `api.culturefestgreece.gr`, keep `lax`; or
    - proxy the API under the frontend's own origin with a Next rewrite.
 
 3. **`EVENT_END` with a timezone offset.** Unset, tokens expire 30 days after each view. Naive

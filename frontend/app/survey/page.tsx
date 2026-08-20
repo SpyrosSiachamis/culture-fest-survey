@@ -197,6 +197,10 @@ export default function SurveyPage() {
             {error && <Notice tone="error">{error}</Notice>}
             {copy.warning && <Notice tone="warning">{copy.warning}</Notice>}
             {copy.note && <Notice tone="info">{copy.note}</Notice>}
+            {/* The anonymity guarantee is stated twice in the whole flow: once at signup, and here
+                on the final screen — the moment someone is actually deciding to submit. It used to
+                appear on every question screen, which is how it stopped being read. */}
+            {isLast && <Notice tone="info">{t.anon.preSubmit}</Notice>}
           </div>
 
           <div className="mt-7">

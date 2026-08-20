@@ -42,8 +42,9 @@ import { formatNumber } from "../../components/format";
 /** The window control here also offers "all", which the breakdown endpoint takes as no window. */
 const ALL = "all";
 
-/** Given its own panel: the lineup question is the one the festival is actually being planned on. */
-const FEATURED_FIELD = "genre_preferences";
+/** Given its own panel: the date is the one question still genuinely open, and the answer the
+ *  client needs in order to pick the window the event runs in. */
+const FEATURED_FIELD = "date_preference";
 
 export default function ResponsesPage() {
   const { t, lang } = useLang();
@@ -162,7 +163,13 @@ export default function ResponsesPage() {
               <Panel>
                 <PanelHeading
                   title={fieldLabel(t, featured.field)}
-                  hint={t.admin.responses.multiHint}
+                  hint={
+                    featured.unanswered > 0
+                      ? format(t.admin.responses.skipped, {
+                          count: formatNumber(featured.unanswered, lang),
+                        })
+                      : undefined
+                  }
                 />
                 <BarChart
                   data={toBarData(t, featured, { sort: "count" })}

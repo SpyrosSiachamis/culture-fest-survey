@@ -19,7 +19,17 @@ from src.routers import surveys
 
 logger = logging.getLogger(__name__)
 
-app = FastAPI()
+# Interactive documentation (/docs, /redoc) and the OpenAPI schema (/openapi.json) are enabled in
+# dev/test by default and disabled in production to prevent schema enumeration on the public API.
+_environment = os.getenv("ENVIRONMENT", "").strip().lower()
+_enable_docs_default = "false" if _environment == "production" else "true"
+_enable_docs = os.getenv("ENABLE_DOCS", _enable_docs_default).strip().lower() in ("true", "1", "yes")
+
+app = FastAPI(
+    docs_url="/docs" if _enable_docs else None,
+    redoc_url="/redoc" if _enable_docs else None,
+    openapi_url="/openapi.json" if _enable_docs else None,
+)
 
 # slowapi resolves the limiter from app.state at request time, so the @limiter.limit decorators on
 # the routers do nothing at all without these two lines.

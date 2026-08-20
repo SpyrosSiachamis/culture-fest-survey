@@ -40,36 +40,27 @@ class AgeRange(str, enum.Enum):
 
 
 class TicketPriceRange(str, enum.Enum):
+    """Four €10-wide bands. Deliberately no open-ended top bucket: an "over X" answer cannot be
+    averaged or compared against the others, and the client caps expectations at €50."""
+
     P10_20 = "10-20"
     P20_30 = "20-30"
     P30_40 = "30-40"
-    OVER_40 = "over_40"
-
-
-class Genre(str, enum.Enum):
-    GREEK_POP = "greek-pop"
-    HIP_HOP = "hip-hop"
-    TRAP = "trap"
-    RNB = "r&b"
-    REGGAETON = "reggaeton"
-    HOUSE = "house"
-    TECHNO = "techno"
-    LAIKO = "laiko"
-    ROCK = "rock"
+    P40_50 = "40-50"
 
 
 class DatePreference(str, enum.Enum):
-    EARLY_SEPTEMBER = "early-september"
-    LATE_SEPTEMBER = "late-september"
-    WEEKEND_ONLY = "weekend-only"
+    """The three candidate windows the event may run in, plus a genuine "any date works" answer.
+
+    ``ANY`` is a real preference, not a skipped question: it says the respondent is happy with all
+    three windows, which is different information from no answer at all. ``date_preference`` is
+    therefore still required — the field has no ``None`` to fall back to.
+    """
+
+    SEP_24_27 = "sep-24-27"
+    SEP_28_OCT_1 = "sep-28-oct-1"
+    OCT_2_7 = "oct-2-7"
     ANY = "any"
-
-
-class StartTimePreference(str, enum.Enum):
-    T20 = "20:00"
-    T21 = "21:00"
-    T22 = "22:00"
-    T23_OR_LATER = "23:00_later"
 
 
 class GroupSize(str, enum.Enum):
@@ -77,14 +68,6 @@ class GroupSize(str, enum.Enum):
     G2_3 = "2-3"
     G4_5 = "4-5"
     G6_PLUS = "6_plus"
-
-
-class AlcoholPreference(str, enum.Enum):
-    BEER = "beer"
-    WINE = "wine"
-    SPIRITS = "spirits"
-    NONE = "none"
-    NO_PREFERENCE = "no-preference"
 
 
 class TransportInterest(str, enum.Enum):

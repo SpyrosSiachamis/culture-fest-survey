@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime
 from typing import Optional
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, JSON, SmallInteger, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, SmallInteger, String, Text
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.dialects.mysql import CHAR
 from sqlalchemy.orm import Mapped, mapped_column
@@ -124,13 +124,10 @@ class SurveyResponse(Base):
     recommend_likelihood: Mapped[int] = mapped_column(SmallInteger)    # 1-10
 
     ticket_price_range: Mapped[str] = mapped_column(String(20))        # e.g. "10-20"
-    genre_preferences: Mapped[list] = mapped_column(JSON)              # multi-select
-    date_preference: Mapped[str] = mapped_column(String(50))
-    start_time_preference: Mapped[str] = mapped_column(String(50))
+    date_preference: Mapped[str] = mapped_column(String(50))           # e.g. "sep-24-27"
     group_size: Mapped[str] = mapped_column(String(20))                # e.g. "2-3"
 
     food_stall_interest: Mapped[bool] = mapped_column(Boolean)
-    alcohol_preference: Mapped[Optional[str]] = mapped_column(String(50))
 
     # --- Tourist only (NULL for student/local) ---
     transport_interest: Mapped[Optional[str]] = mapped_column(String(10))  # yes/no/maybe

@@ -23,12 +23,9 @@ SURVEY_PAYLOAD = {
     "interest_level": 8,
     "recommend_likelihood": 9,
     "ticket_price_range": "10-20",
-    "genre_preferences": ["rock", "laiko"],
-    "date_preference": "weekend-only",
-    "start_time_preference": "21:00",
+    "date_preference": "sep-24-27",
     "group_size": "2-3",
     "food_stall_interest": True,
-    "alcohol_preference": "beer",
     "open_feedback": "Looking forward to it.",
 }
 

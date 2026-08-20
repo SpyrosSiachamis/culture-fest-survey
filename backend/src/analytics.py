@@ -4,16 +4,21 @@ Two rules shape this module.
 
 **No category is written down here.** The list of answer options for every question is derived at
 import time by introspecting ``SurveyIn`` — the same pydantic model that validates submissions,
-whose categorical fields are typed as the enums in ``src/enums.py``. Add a genre to ``Genre`` and it
-becomes a filter, a bar and a row of stats with no edit to this file. The one thing that is *not*
-derived is the human-readable label, which lives in the frontend locale files keyed by these same
-values, so a category is translated once and used by both the survey and the dashboard.
+whose categorical fields are typed as the enums in ``src/enums.py``. Add a price band to
+``TicketPriceRange`` and it becomes a filter, a bar and a row of stats with no edit to this file;
+drop a question from ``SurveyIn`` and it disappears from the dashboard just as automatically. The
+one thing that is *not* derived is the human-readable label, which lives in the frontend locale
+files keyed by these same values, so a category is translated once and used by both the survey and
+the dashboard.
 
 **Counting happens in Python, not in SQL.** The rows are fetched with the window applied and tallied
-here. That keeps one implementation working identically on MySQL and on the SQLite the tests run
-against — ``genre_preferences`` is a JSON array, and counting inside it needs dialect-specific
-functions. The whole festival is a few thousand responses at the very most, so the cost of loading
+here, which keeps one implementation working identically on MySQL and on the SQLite the tests run
+against. The whole festival is a few thousand responses at the very most, so the cost of loading
 them is irrelevant; if that ever stops being true, the distributions are the part to push into SQL.
+
+The ``multi`` (multi-select) branch below currently has no field to serve — the survey has none
+since ``genre_preferences`` was dropped — but it is kept because it costs nothing and is what any
+future "pick as many as you like" question would need.
 """
 
 import datetime as dt
