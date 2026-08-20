@@ -125,6 +125,21 @@
     "loadError": "Could not load your account. Check your connection and try again.",
     "retry": "Try again"
   },
+  "footer": {
+    "privacy": "Privacy Policy",
+    "team": "Culture Fest Project Team",
+    "label": "Site information",
+    "developedBy": "Developed by Spyridon Siahamis"
+  },
+  "privacy": {
+    "title": "Privacy Policy · Culture Fest 2026",
+    "eyebrow": "Legal",
+    "heading": "Privacy Policy",
+    "updatedLabel": "Last updated",
+    "statusLabel": "Status",
+    "translationNote": "This policy is published in English and Greek. Where the two differ, the English text is the authoritative version.",
+    "home": "Back to Culture Fest 2026"
+  },
   "notFound": {
     "title": "Not found · Culture Fest 2026",
     "eyebrow": "Error",
