@@ -53,20 +53,26 @@ RESET_TOKEN_TTL_MINUTES = int(os.getenv("PASSWORD_RESET_TTL_MINUTES", "30"))
 # frontend by definition — so production sends production links without a second variable to
 # forget, and a dev stack still works out of the box.
 _FRONTEND_BASE_URL = (os.getenv("FRONTEND_BASE_URL", "").strip().rstrip("/") or None)
-_FIRST_ALLOWED_ORIGIN = next(
-    (
-        stripped
-        for origin in os.getenv("ALLOWED_ORIGINS", "").split(",")
-        if (stripped := origin.strip().rstrip("/"))
-    ),
-    None,
-)
 
 RESET_PATH = "/reset-password"
 
 
 def frontend_base_url() -> str:
-    return _FRONTEND_BASE_URL or _FIRST_ALLOWED_ORIGIN or "http://localhost:3000"
+    if _FRONTEND_BASE_URL:
+        return _FRONTEND_BASE_URL
+        
+    origins = [
+        stripped
+        for origin in os.getenv("ALLOWED_ORIGINS", "").split(",")
+        if (stripped := origin.strip().rstrip("/"))
+    ]
+    
+    # Prefer the custom domain if multiple origins are allowed (e.g. Vercel + custom)
+    for origin in origins:
+        if "culturefestgreece.gr" in origin:
+            return origin
+            
+    return origins[0] if origins else "http://localhost:3000"
 
 
 def _password_fingerprint(hashed_password: str) -> str:
