@@ -52,10 +52,14 @@ if _trusted_proxy_ips:
         )
     app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=_trusted_proxy_ips)
 
+# A browser's Origin header is scheme://host[:port] and never carries a trailing slash, so an
+# entry written as "https://example.com/" — the form you get from copying a site's URL out of the
+# address bar — would silently never match, and the real frontend would be refused by CORS with
+# nothing in the logs to say why. Normalising here means that copy-paste cannot break the deploy.
 _allowed_origins = [
-    origin.strip()
+    stripped
     for origin in os.getenv("ALLOWED_ORIGINS", "").split(",")
-    if origin.strip()
+    if (stripped := origin.strip().rstrip("/"))
 ]
 app.add_middleware(
     CORSMiddleware,

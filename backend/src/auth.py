@@ -41,14 +41,45 @@ AUTH_COOKIE_NAME = "cf_session"
 # cookie would simply never be stored. Any deployment served over HTTPS must set this to true.
 AUTH_COOKIE_SECURE = os.getenv("AUTH_COOKIE_SECURE", "false").strip().lower() == "true"
 
-# Lax is enough here: frontend and API differ only by port, and a port is not part of a "site", so
-# the cookie is first-party on every call the app makes. It also means the browser withholds the
-# cookie from cross-site POSTs, which is this app's CSRF defence. Only set "none" (which requires
-# Secure) if the API is moved to a genuinely different site from the frontend.
+# "lax" is what makes the browser withhold this cookie from cross-site requests, and that is the
+# whole of this app's CSRF defence — there is no CSRF token anywhere.
+#
+# It holds in both deployments because "site" means the registrable domain, not the origin:
+#
+#   dev   localhost:3000 -> localhost:5000            same site (a port is not part of a site)
+#   prod  culturefest.gr -> api.culturefest.gr        same site (both are culturefest.gr)
+#
+# Different origins in both cases, which is why CORS and `credentials: "include"` are still needed;
+# same site in both, which is why a Lax cookie is still sent. Nothing about the production split
+# requires loosening this.
+#
+# Only a frontend on a genuinely different domain would force "none" (which additionally requires
+# Secure — see the guard below). That would be a real reduction in defence, leaving only the fact
+# that this API parses no body unless it arrives as `application/json`: not a CORS-"simple" content
+# type, so a cross-site write would still need a preflight that the origin allowlist refuses. The
+# gap it opens is any endpoint that takes no body — today just /accounts/logout, whose entire blast
+# radius is clearing the caller's own cookie. Add an unauthenticated endpoint that acts on a body,
+# and that reasoning stops holding; it would need a real CSRF token instead.
+_SAMESITE_VALUES = ("lax", "strict", "none")
 AUTH_COOKIE_SAMESITE = cast(
     Literal["lax", "strict", "none"],
     os.getenv("AUTH_COOKIE_SAMESITE", "lax").strip().lower(),
 )
+
+# Both of these are misconfigurations a browser punishes *silently* — it drops the cookie and the
+# user simply cannot stay signed in, with nothing server-side to show for it. Refusing to start is
+# far cheaper to diagnose than a deployment where login appears to succeed and nothing else works.
+if AUTH_COOKIE_SAMESITE not in _SAMESITE_VALUES:
+    raise RuntimeError(
+        f"AUTH_COOKIE_SAMESITE must be one of {', '.join(_SAMESITE_VALUES)}; "
+        f"got {AUTH_COOKIE_SAMESITE!r}"
+    )
+
+if AUTH_COOKIE_SAMESITE == "none" and not AUTH_COOKIE_SECURE:
+    raise RuntimeError(
+        "AUTH_COOKIE_SAMESITE='none' requires AUTH_COOKIE_SECURE='true': browsers reject a "
+        "SameSite=None cookie that is not also Secure, so no session cookie would ever be stored."
+    )
 
 # Unset means "host-only": the cookie is sent back to exactly the host that set it.
 AUTH_COOKIE_DOMAIN = os.getenv("AUTH_COOKIE_DOMAIN") or None

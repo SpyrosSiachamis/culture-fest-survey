@@ -8,7 +8,7 @@ Survey app for the Culture Fest event (Hersonissos, Crete) — built with Next.j
 - Frontend: Next.js
 - Backend: FastAPI
 - Database: MySQL + myphpadmin
-- Deployment: Vercel (frontend) + TBD (backend)
+- Deployment: `culturefest.gr` (frontend) + `api.culturefest.gr` (backend)
 
 ## Setup
 
@@ -61,7 +61,7 @@ Relevant settings in `backend/.env` (see `.env.example` for the full notes):
 | --- | --- | --- |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `720` | Session length, and the cookie's max-age. |
 | `AUTH_COOKIE_SECURE` | `false` | **Must be `true` when served over HTTPS.** |
-| `AUTH_COOKIE_SAMESITE` | `lax` | Also the CSRF defence. `none` requires `Secure`. |
+| `AUTH_COOKIE_SAMESITE` | `lax` | Also the CSRF defence. Correct in production too — see below. `none` requires `Secure`. |
 | `AUTH_COOKIE_DOMAIN` | unset | Host-only cookie unless set. |
 
 The frontend must call the API with `credentials: "include"` (it does, in `lib/api.ts`) and the
@@ -188,14 +188,51 @@ docker compose -f docker-compose.prod.yml up -d --build
 
 It drops phpMyAdmin, gives the database no host port (only the backend reaches it), binds the app
 ports to `127.0.0.1` for a TLS reverse proxy (Caddy, or `tailscale serve`) to front, runs real
-builds, and forces `AUTH_COOKIE_SECURE=true`. Before deploying, set in `backend/.env`:
+builds, and sets `AUTH_COOKIE_SECURE=true`, `AUTH_COOKIE_SAMESITE=none` and `TRUSTED_PROXY_IPS`
+in the compose file itself. Those three live there rather than in `backend/.env` because that
+file is shared with the dev stack, where each of them would break it.
+
+Before deploying, set in `backend/.env`:
 
 - strong `SECRET_KEY` / `PEPPER` / DB passwords (`openssl rand -hex 32` for the first two);
-- `ALLOWED_ORIGINS` — the real public origin(s);
-- `TRUSTED_PROXY_IPS` — the reverse proxy's address. The rate limiter keys on the client IP, and
-  behind a proxy every request arrives from the proxy; without this, all callers share one bucket
-  and per-IP brute-force limits stop working. Set it and `X-Forwarded-For` is honoured **only** from
-  that proxy, so no client can spoof the header to dodge a limit.
+- `ALLOWED_ORIGINS` — the real public origin(s), **without a trailing slash**. A browser's
+  `Origin` header never carries one, so `https://example.com/` would never match and the real
+  frontend would be refused by CORS. The app strips one defensively, but do not rely on it.
+
+`docker-compose.prod.yml` also pins `ALLOWED_ORIGINS` to the real origins, overriding the dev
+list in `backend/.env` — those are credentialed origins, so a page on a developer's machine
+must not be able to make authenticated calls against the live API.
+
+### Why the session cookie stays `SameSite=Lax`
+
+`culturefest.gr` and `api.culturefest.gr` are different **origins** but the same **site**:
+SameSite is judged on the registrable domain (`culturefest.gr` — `.gr` is the public suffix),
+so the subdomain split is same-site and a `Lax` cookie is sent on the frontend's API calls,
+exactly as in dev. CORS and `credentials: "include"` are still required, because they are
+still cross-origin.
+
+This matters because `Lax` is the *entire* CSRF defence — there is no CSRF token. Only moving
+the frontend to a different domain (a `*.vercel.app` URL, say) would force `none`, and that
+would leave the API relying on the fact that it parses no body unless it arrives as
+`application/json`, forcing a preflight that `ALLOWED_ORIGINS` refuses. `none` also requires
+`Secure`; `src/auth.py` refuses to start if the two disagree, rather than letting the browser
+drop the cookie silently.
+
+The cookie is host-only (`AUTH_COOKIE_DOMAIN` unset), so it is returned to
+`api.culturefest.gr` alone and never broadcast to other subdomains. Leave it that way.
+
+### The one setting production gets wrong by default
+
+**`TRUSTED_PROXY_IPS=172.16.0.0/12`.** The rate limiter keys on the client IP, and behind a proxy
+every request arrives from the proxy; without this, all callers share one bucket and per-IP
+brute-force limits stop working. Note this is **not** `127.0.0.1`: the backend runs in a container
+reached over Docker's bridge, so a proxy on the host arrives from the bridge gateway (`172.x.0.1`), and a compose network's gateway is allocated dynamically — hence the range
+rather than a fixed address. Nothing off-host can reach the container (the published port binds
+`127.0.0.1`), so only the proxy and the sibling services are in it. Never `*`.
+
+Finally, the frontend needs `NEXT_PUBLIC_API_URL=https://api.culturefest.gr`. It is inlined at
+**build** time, so it must be set wherever the frontend is built; unset, `lib/api.ts` falls back to
+the page's own hostname on port 5000 and every call fails.
 
 ## Tests
 
