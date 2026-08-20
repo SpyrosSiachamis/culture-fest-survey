@@ -128,8 +128,7 @@
   "footer": {
     "privacy": "Privacy Policy",
     "team": "Culture Fest Project Team",
-    "label": "Site information",
-    "developedBy": "Developed by Spyridon Siahamis"
+    "label": "Site information"
   },
   "privacy": {
     "title": "Privacy Policy · Culture Fest 2026",
@@ -139,6 +138,9 @@
     "statusLabel": "Status",
     "translationNote": "This policy is published in English and Greek. Where the two differ, the English text is the authoritative version.",
     "home": "Back to Culture Fest 2026"
+  },
+  "footer_developed": {
+    "developedBy": "Developed by Spiros Siahamis"
   },
   "notFound": {
     "title": "Not found · Culture Fest 2026",

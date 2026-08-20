@@ -44,7 +44,7 @@ export function SiteFooter() {
         </Link>
       </div>
       <div className="absolute bottom-0 left-0 h-px w-full bg-linear-to-r from-gold/70 via-magenta/50 to-violet/60" >
-        <p className="ticker text-[10px] text-bone/45">{t.footer.developedBy}</p>
+        <p className="ticker text-[10px] text-bone/45">{t.footer_developed.developedBy}</p>
       </div>
     </footer>
   );
