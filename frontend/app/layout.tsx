@@ -43,7 +43,7 @@ const notoDisplay = Noto_Sans_Display({
 });
 
 export const metadata: Metadata = {
-  title: "Culture Fest 2026 Survey",
+  title: "Culture Fest 2026",
   description:
     "Help shape Culture Fest 2026 at DIO Beach Club — tell us what you want from the night",
 };
