@@ -5,6 +5,7 @@ import { AuthProvider } from "@/components/AuthProvider";
 import { LanguageProvider } from "@/components/LanguageProvider";
 import { SiteFooter } from "./components/SiteFooter";
 import { Analytics } from "@vercel/analytics/next"
+import { SpeedInsights } from "@vercel/speed-insights/next"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -63,6 +64,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <AuthProvider>
             {children}
             <Analytics />
+            <SpeedInsights />
           </AuthProvider>
           <SiteFooter />
         </LanguageProvider>
