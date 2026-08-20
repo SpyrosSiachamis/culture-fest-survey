@@ -42,9 +42,9 @@ const notoDisplay = Noto_Sans_Display({
 });
 
 export const metadata: Metadata = {
-  title: "Culture Fest Survey",
+  title: "Culture Fest 2026 Survey",
   description:
-    "Help shape Culture Fest in Hersonissos — tell us what you want from the lineup, the pricing and the night.",
+    "Help shape Culture Fest 2026 at DIO Beach Club — tell us what you want from the night",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

@@ -52,9 +52,13 @@ export default function SurveyPage() {
   const [index, setIndex] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  // Set when the backend rejects this submission because the account had already answered. Kept
+  // apart from `submitted` so the screen can say so, and separate from `profile.has_voted` because
+  // the refreshed profile has not arrived yet at the moment the rejection lands.
+  const [duplicate, setDuplicate] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const alreadyVoted = profile?.has_voted ?? false;
+  const alreadyVoted = duplicate || (profile?.has_voted ?? false);
   const isDone = submitted || alreadyVoted;
 
   const audience = (answers.audience_type as AudienceType | undefined) ?? null;
@@ -102,9 +106,12 @@ export default function SurveyPage() {
       // Submitting is what earns the door pass, so the cached profile is now stale.
       void refresh();
     } catch (caught) {
-      // "Already submitted" is a finished state, not a failure to retry.
+      // "Already submitted" is a finished state, not a failure to retry — but it is not *this*
+      // response finishing, so it must not claim the answers just typed were stored. The account
+      // answered earlier (or a concurrent request won the atomic claim), and this payload was
+      // discarded server-side.
       if (isApiError(caught) && caught.status === "already_submitted") {
-        setSubmitted(true);
+        setDuplicate(true);
         void refresh();
         return;
       }
