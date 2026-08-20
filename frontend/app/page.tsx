@@ -76,11 +76,17 @@ export default function HomePage() {
             {surveyDone ? t.common.profile : t.login.startSurvey}
           </PrimaryButton>
         </Link>
-        <Link href={surveyDone ? "/survey" : "/profile"} className="mt-3 block text-center">
-          <GhostButton type="button" className="w-full">
-            {surveyDone ? t.profile.backToSurvey : t.common.profile}
-          </GhostButton>
-        </Link>
+        {/* Nothing is offered as a second destination once the survey is in. The only one there
+            ever was pointed back at /survey, which read as an invitation to answer again — but a
+            response is final: the backend refuses the second one, so the trip could only ever end
+            in an error. */}
+        {!surveyDone && (
+          <Link href="/profile" className="mt-3 block text-center">
+            <GhostButton type="button" className="w-full">
+              {t.common.profile}
+            </GhostButton>
+          </Link>
+        )}
       </SplitLayout>
     );
   }
