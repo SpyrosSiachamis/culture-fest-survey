@@ -19,8 +19,11 @@
 #
 # Before deploying, set in backend/.env:
 #   * strong SECRET_KEY / PEPPER / DB_PASSWORD / MYSQL_* (openssl rand -hex 32 for the first two);
-#   * ALLOWED_ORIGINS to the real public origin(s);
-#   * TRUSTED_PROXY_IPS to the reverse proxy's address, so per-IP rate limiting survives the proxy.
+#   * ALLOWED_ORIGINS to the real public origin(s), with no trailing slash on any of them — a
+#     browser's Origin header never has one, so "https://example.com/" would never match.
+#
+# AUTH_COOKIE_SECURE, AUTH_COOKIE_SAMESITE and TRUSTED_PROXY_IPS are set below rather than in
+# backend/.env, because that file is shared with the dev stack and each of these would break it.
 
 services:
     backend:
@@ -43,6 +46,46 @@ services:
             # Secure attribute, so it is never sent (or stored) over plain HTTP. TLS is terminated by
             # the fronting proxy.
             AUTH_COOKIE_SECURE: 'true'
+            # Explicit, though it matches the default, because it is the setting most likely to be
+            # "fixed" by someone debugging a session problem — and changing it here would quietly
+            # give up the app's CSRF defence.
+            #
+            # "lax" is correct because culturefest.gr and api.culturefest.gr are the same *site*:
+            # SameSite is judged on the registrable domain (culturefest.gr — .gr is the public
+            # suffix), not on the origin, so a subdomain split is same-site and the cookie is sent
+            # on the frontend's API calls exactly as it is in dev. They are still different
+            # *origins*, which is why ALLOWED_ORIGINS below is still required.
+            #
+            # It would only need to become "none" if the frontend moved to a genuinely different
+            # domain (a *.vercel.app URL, say). That also requires Secure — src/auth.py refuses to
+            # start if the two disagree — and would leave this API relying on the JSON content-type
+            # preflight alone to block cross-site writes.
+            AUTH_COOKIE_SAMESITE: 'lax'
+            # Production origins only. Overrides the value in backend/.env, which is shared with the
+            # dev stack and lists localhost and tailnet origins — those are credentialed origins, so
+            # carrying them into production would let a page on a developer's own machine make
+            # authenticated calls against the live API.
+            #
+            # The apex and www are both listed because the browser sends whichever origin the page
+            # was actually loaded from; drop www if it redirects to the apex before any API call is
+            # made. No trailing slashes — an Origin header never has one.
+            ALLOWED_ORIGINS: 'https://culturefest.gr,https://www.culturefest.gr'
+            # Restores the real client IP from X-Forwarded-For, without which every request appears
+            # to come from the proxy and the whole userbase shares one rate-limit bucket — so a
+            # single abuser would trip the login/verify/submit limits for everybody.
+            #
+            # This must be the address the *container* sees the proxy as, which is not the address
+            # the proxy runs on: the backend is published on 127.0.0.1 and reached over Docker's
+            # bridge, so a connection from a host-side proxy arrives from the bridge gateway
+            # (172.x.0.1), never from 127.0.0.1. The gateway of a compose-created network is
+            # allocated dynamically, so this trusts the private range those gateways come from
+            # rather than a fixed address that would break the next time the network is recreated.
+            #
+            # Safe because nothing outside this host can open a connection to the container at all
+            # (the published port binds 127.0.0.1 only), so the only peers in this range are the
+            # proxy and the other services on app-network. Never widen it to "*" — that would trust
+            # X-Forwarded-For from any caller and hand every client a spoofable rate-limit key.
+            TRUSTED_PROXY_IPS: '172.16.0.0/12'
         # No --reload, no source mount: the image's baked code and CMD run as-is.
         networks:
             - app-network
