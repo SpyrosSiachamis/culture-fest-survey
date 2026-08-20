@@ -8,7 +8,7 @@ Survey app for the Culture Fest event (Hersonissos, Crete) — built with Next.j
 - Frontend: Next.js
 - Backend: FastAPI
 - Database: MySQL + myphpadmin
-- Deployment: `culturefest.gr` (frontend) + `api.culturefest.gr` (backend)
+- Deployment: `culturefestgreece.gr` (frontend) + `api.culturefestgreece.gr` (backend)
 
 ## Setup
 
@@ -205,8 +205,8 @@ must not be able to make authenticated calls against the live API.
 
 ### Why the session cookie stays `SameSite=Lax`
 
-`culturefest.gr` and `api.culturefest.gr` are different **origins** but the same **site**:
-SameSite is judged on the registrable domain (`culturefest.gr` — `.gr` is the public suffix),
+`culturefestgreece.gr` and `api.culturefestgreece.gr` are different **origins** but the same **site**:
+SameSite is judged on the registrable domain (`culturefestgreece.gr` — `.gr` is the public suffix),
 so the subdomain split is same-site and a `Lax` cookie is sent on the frontend's API calls,
 exactly as in dev. CORS and `credentials: "include"` are still required, because they are
 still cross-origin.
@@ -219,7 +219,7 @@ would leave the API relying on the fact that it parses no body unless it arrives
 drop the cookie silently.
 
 The cookie is host-only (`AUTH_COOKIE_DOMAIN` unset), so it is returned to
-`api.culturefest.gr` alone and never broadcast to other subdomains. Leave it that way.
+`api.culturefestgreece.gr` alone and never broadcast to other subdomains. Leave it that way.
 
 ### The one setting production gets wrong by default
 
@@ -230,7 +230,7 @@ reached over Docker's bridge, so a proxy on the host arrives from the bridge gat
 rather than a fixed address. Nothing off-host can reach the container (the published port binds
 `127.0.0.1`), so only the proxy and the sibling services are in it. Never `*`.
 
-Finally, the frontend needs `NEXT_PUBLIC_API_URL=https://api.culturefest.gr`. It is inlined at
+Finally, the frontend needs `NEXT_PUBLIC_API_URL=https://api.culturefestgreece.gr`. It is inlined at
 **build** time, so it must be set wherever the frontend is built; unset, `lib/api.ts` falls back to
 the page's own hostname on port 5000 and every call fails.
 

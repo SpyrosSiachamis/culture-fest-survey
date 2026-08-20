@@ -6,13 +6,10 @@ from pydantic import field_validator, model_validator
 from src.enums import (
     AccountType,
     AgeRange,
-    AlcoholPreference,
     AudienceType,
     DatePreference,
     Gender,
-    Genre,
     GroupSize,
-    StartTimePreference,
     TicketPriceRange,
     TransportInterest,
 )
@@ -132,14 +129,12 @@ class SurveyBase(pydantic.BaseModel):
     interest_level: int = pydantic.Field(ge=SCALE_MIN, le=SCALE_MAX)
     recommend_likelihood: int = pydantic.Field(ge=SCALE_MIN, le=SCALE_MAX)
     ticket_price_range: TicketPriceRange
-    # At least one genre: an empty list is not an answer, and it would sit in the analytics as a
-    # response that silently counts towards the denominator of every genre.
-    genre_preferences: t.List[Genre] = pydantic.Field(min_length=1)
+    # Required, including the "any date works" option — see DatePreference. A respondent with no
+    # preference picks that rather than leaving the question blank, so an absent value here means a
+    # malformed submission, not indifference.
     date_preference: DatePreference
-    start_time_preference: StartTimePreference
     group_size: GroupSize
     food_stall_interest: bool
-    alcohol_preference: t.Optional[AlcoholPreference] = None
     # Free text, so no enum — and excluded from the analytics catalogue for the same reason it
     # carries a warning in the survey UI: it is small-cardinality and could identify a respondent.
     accommodation_area: t.Optional[str] = pydantic.Field(default=None, max_length=100)

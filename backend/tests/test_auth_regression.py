@@ -200,3 +200,28 @@ def test_unique_phone_constraint_still_applies(client, sent_emails, db_session):
     # No account created and no code issued for the duplicate phone number.
     assert get_account(db_session, "someone-else@example.com") is None
     assert len(sent_emails) == before
+
+
+def test_docs_endpoints_enabled_by_default(client):
+    """In test and dev, FastAPI docs and openapi schema are available."""
+    assert client.get("/docs").status_code == 200
+    assert client.get("/openapi.json").status_code == 200
+
+
+def test_docs_endpoints_disabled_in_production(monkeypatch):
+    """In production, /docs, /redoc, and /openapi.json are disabled (404)."""
+    import importlib
+    from fastapi.testclient import TestClient
+
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    import src.app
+    prod_app_module = importlib.reload(src.app)
+    prod_client = TestClient(prod_app_module.app)
+
+    assert prod_client.get("/docs").status_code == 404
+    assert prod_client.get("/redoc").status_code == 404
+    assert prod_client.get("/openapi.json").status_code == 404
+
+    # Reset module back to default test environment
+    monkeypatch.delenv("ENVIRONMENT", raising=False)
+    importlib.reload(src.app)

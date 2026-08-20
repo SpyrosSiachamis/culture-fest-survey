@@ -14,13 +14,10 @@ export type QuestionId =
   | "gender"
   | "interest_level"
   | "ticket_price_range"
-  | "genre_preferences"
   | "date_preference"
-  | "start_time_preference"
   | "group_size"
   | "recommend_likelihood"
   | "food_stall_interest"
-  | "alcohol_preference"
   | "transport_interest"
   | "accommodation_area"
   | "has_student_pass"
@@ -45,41 +42,17 @@ export const QUESTIONS: Question[] = [
   { id: "age_range", kind: "single", optional: true, values: ["18-20", "21-24", "25-29", "30_plus"] },
   { id: "gender", kind: "single", values: ["male", "female", "other"] },
   { id: "interest_level", kind: "scale" },
-  { id: "ticket_price_range", kind: "single", values: ["10-20", "20-30", "30-40", "over_40"] },
-  {
-    id: "genre_preferences",
-    kind: "multi",
-    values: [
-      "greek-pop",
-      "hip-hop",
-      "trap",
-      "r&b",
-      "reggaeton",
-      "house",
-      "techno",
-      "laiko",
-      "rock",
-    ],
-  },
+  { id: "ticket_price_range", kind: "single", values: ["10-20", "20-30", "30-40", "40-50"] },
+  // "any" is a selectable answer meaning "all three windows suit me", not a skip — which is why
+  // this question is not marked optional.
   {
     id: "date_preference",
     kind: "single",
-    values: ["early-september", "late-september", "weekend-only", "any"],
-  },
-  {
-    id: "start_time_preference",
-    kind: "single",
-    values: ["20:00", "21:00", "22:00", "23:00_later"],
+    values: ["sep-24-27", "sep-28-oct-1", "oct-2-7", "any"],
   },
   { id: "group_size", kind: "single", values: ["alone", "2-3", "4-5", "6_plus"] },
   { id: "recommend_likelihood", kind: "scale" },
   { id: "food_stall_interest", kind: "bool" },
-  {
-    id: "alcohol_preference",
-    kind: "single",
-    optional: true,
-    values: ["beer", "wine", "spirits", "none", "no-preference"],
-  },
   { id: "transport_interest", kind: "single", appliesTo: ["tourist"], values: ["yes", "maybe", "no"] },
   {
     id: "accommodation_area",

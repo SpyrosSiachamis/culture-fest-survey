@@ -10,10 +10,15 @@ verification code, or the recipient address — failures are reported by status 
 import html
 import logging
 import os
+import re
 
 import httpx
 
 logger = logging.getLogger(__name__)
+
+# Anything shaped like an address, so a rejection reason can be logged without the recipient's
+# email going into the logs along with it.
+_ADDRESS = re.compile(r"[^\s<>@,;]+@[^\s<>@,;]+")
 
 RESEND_API_URL = "https://api.resend.com/emails"
 REQUEST_TIMEOUT_SECONDS = 10.0
@@ -29,6 +34,25 @@ def _api_key() -> str | None:
 
 def _from_address() -> str | None:
     return os.getenv("EMAIL_FROM")
+
+
+def _rejection_reason(response: httpx.Response) -> str:
+    """Why Resend refused a send, with any email address removed.
+
+    Resend reports errors as ``{"name": ..., "message": ...}``. Both are about the request rather
+    than the person, which is what makes them safe to log once addresses are scrubbed — the message
+    for an unverified sender, for instance, names the domain and nothing else.
+    """
+    try:
+        body = response.json()
+    except ValueError:
+        return ""
+
+    if not isinstance(body, dict):
+        return ""
+
+    parts = [str(body[key]) for key in ("name", "message") if body.get(key)]
+    return _ADDRESS.sub("<address>", " — ".join(parts)) if parts else ""
 
 
 def _send(to: str, subject: str, html_body: str, text_body: str) -> None:
@@ -56,8 +80,18 @@ def _send(to: str, subject: str, html_body: str, text_body: str) -> None:
             timeout=REQUEST_TIMEOUT_SECONDS,
         )
         if response.status_code >= 400:
-            # Status code only — the response body can echo the recipient address back at us.
-            logger.error("Resend rejected an email with status %s", response.status_code)
+            # The reason matters: the failures that actually happen here are configuration, not
+            # transient — an unverified sending domain, a revoked key — and every one of them is
+            # invisible from the outside, because a failed send still leaves signup answering 202.
+            # Without this, the only symptom is users reporting that no code ever arrived.
+            #
+            # Resend's body can echo the recipient back, so addresses are stripped before logging;
+            # what survives is the part that names the problem.
+            logger.error(
+                "Resend rejected an email with status %s%s",
+                response.status_code,
+                f": {reason}" if (reason := _rejection_reason(response)) else "",
+            )
     except httpx.HTTPError as exc:
         logger.error("Email delivery failed: %s", type(exc).__name__)
 

@@ -7,10 +7,12 @@ signed-in ordinary user alike. Several tests below exist only to keep that true.
 """
 
 import datetime as dt
+from types import SimpleNamespace
 
+from src import analytics
 from src.analytics import CATALOGUE, CATALOGUE_BY_NAME
 from src.database.models import Account, SurveyResponse
-from src.enums import AccountType, Genre, TicketPriceRange
+from src.enums import AccountType, DatePreference, TicketPriceRange
 from tests.helpers import SURVEY_PAYLOAD, get_account, signup
 
 # Every admin route, so a new one cannot be added without being covered by the masking tests.
@@ -555,9 +557,11 @@ def test_the_catalogue_follows_the_enums(client, sent_emails, db_session):
     body = client.get("/admin/analytics/schema").json()
     fields = {field["name"]: field for field in body["fields"]}
 
-    assert fields["genre_preferences"]["values"] == [member.value for member in Genre]
-    assert fields["genre_preferences"]["kind"] == "multi"
     assert fields["ticket_price_range"]["values"] == [m.value for m in TicketPriceRange]
+    assert fields["ticket_price_range"]["kind"] == "single"
+    assert fields["date_preference"]["values"] == [m.value for m in DatePreference]
+    # "any" is a real answer, so the question is required and carries no "no answer" bucket.
+    assert fields["date_preference"]["optional"] is False
     # Scale bounds come from the pydantic constraint, not from a number typed into the analytics.
     assert fields["interest_level"] == {
         "name": "interest_level",
@@ -685,25 +689,22 @@ def test_declared_options_appear_even_with_no_takers(client, sent_emails, db_ses
     prices = next(d for d in body["distributions"] if d["field"] == "ticket_price_range")
 
     assert [bucket["value"] for bucket in prices["buckets"]] == [m.value for m in TicketPriceRange]
-    assert {b["value"]: b["count"] for b in prices["buckets"]}["over_40"] == 0
+    assert {b["value"]: b["count"] for b in prices["buckets"]}["40-50"] == 0
 
 
-def test_a_multi_select_counts_each_choice(client, sent_emails, db_session):
-    _signed_in_admin(client, sent_emails, db_session)
-    now = dt.datetime.now(dt.timezone.utc).replace(tzinfo=None)
+def test_the_multi_select_tally_survives_having_no_multi_field():
+    """No survey question is multi-select since genre_preferences was dropped, so nothing reaches
+    this branch through the API — but it is kept for the next such question, and untested code that
+    is kept is code that rots. Exercised directly against the tally helper instead."""
+    field = analytics.AnalyticsField("hypothetical", "multi", ("rock", "techno"), optional=False)
 
-    _add_response(db_session, now, genre_preferences=["rock", "techno"])
-    _add_response(db_session, now, genre_preferences=["rock"])
-
-    body = client.get("/admin/analytics/breakdown").json()
-    genres = next(d for d in body["distributions"] if d["field"] == "genre_preferences")
-    counts = {bucket["value"]: bucket["count"] for bucket in genres["buckets"]}
-
-    assert counts["rock"] == 2
-    assert counts["techno"] == 1
-    assert counts["house"] == 0
-    # Two respondents, three selections — the denominator is respondents, not selections.
-    assert genres["respondents"] == 2
+    assert analytics._answer_values(
+        SimpleNamespace(hypothetical=["rock", "techno"]), field
+    ) == ["rock", "techno"]
+    # A skipped question contributes nothing rather than an empty-string bucket.
+    assert analytics._answer_values(SimpleNamespace(hypothetical=None), field) == []
+    # A hand-edited row holding something other than a list must not take the dashboard down.
+    assert analytics._answer_values(SimpleNamespace(hypothetical="not a list"), field) == []
 
 
 def test_a_skipped_optional_answer_is_counted_separately(client, sent_emails, db_session):
@@ -753,18 +754,6 @@ def test_filters_and_within_fields_or_across_values(client, sent_emails, db_sess
     ).json()
     assert narrowed["matched"] == 1
     assert narrowed["total"] == 3
-
-
-def test_a_multi_select_filter_matches_any_choice(client, sent_emails, db_session):
-    _signed_in_admin(client, sent_emails, db_session)
-    now = dt.datetime.now(dt.timezone.utc).replace(tzinfo=None)
-
-    _add_response(db_session, now, genre_preferences=["rock", "techno"])
-    _add_response(db_session, now, genre_preferences=["laiko"])
-
-    body = client.get("/admin/analytics/breakdown?genre_preferences=techno").json()
-
-    assert body["matched"] == 1
 
 
 def test_an_unknown_filter_is_rejected_rather_than_ignored(client, sent_emails, db_session):

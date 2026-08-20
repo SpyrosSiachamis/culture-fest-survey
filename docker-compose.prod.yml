@@ -42,6 +42,8 @@ services:
         env_file:
             - backend/.env
         environment:
+            ENVIRONMENT: 'production'
+            ENABLE_DOCS: 'false'
             # Guardrail, not a default to be overridden: a production session cookie must carry the
             # Secure attribute, so it is never sent (or stored) over plain HTTP. TLS is terminated by
             # the fronting proxy.
@@ -50,11 +52,11 @@ services:
             # "fixed" by someone debugging a session problem — and changing it here would quietly
             # give up the app's CSRF defence.
             #
-            # "lax" is correct because culturefest.gr and api.culturefest.gr are the same *site*:
-            # SameSite is judged on the registrable domain (culturefest.gr — .gr is the public
-            # suffix), not on the origin, so a subdomain split is same-site and the cookie is sent
-            # on the frontend's API calls exactly as it is in dev. They are still different
-            # *origins*, which is why ALLOWED_ORIGINS below is still required.
+            # "lax" is correct because culturefestgreece.gr and api.culturefestgreece.gr are the
+            # same *site*: SameSite is judged on the registrable domain (culturefestgreece.gr —
+            # .gr is the public suffix), not on the origin, so a subdomain split is same-site and
+            # the cookie is sent on the frontend's API calls exactly as it is in dev. They are
+            # still different *origins*, which is why ALLOWED_ORIGINS below is still required.
             #
             # It would only need to become "none" if the frontend moved to a genuinely different
             # domain (a *.vercel.app URL, say). That also requires Secure — src/auth.py refuses to
@@ -69,7 +71,7 @@ services:
             # The apex and www are both listed because the browser sends whichever origin the page
             # was actually loaded from; drop www if it redirects to the apex before any API call is
             # made. No trailing slashes — an Origin header never has one.
-            ALLOWED_ORIGINS: 'https://culturefest.gr,https://www.culturefest.gr'
+            ALLOWED_ORIGINS: 'https://culturefestgreece.gr,https://www.culturefestgreece.gr'
             # Restores the real client IP from X-Forwarded-For, without which every request appears
             # to come from the proxy and the whole userbase shares one rate-limit bucket — so a
             # single abuser would trip the login/verify/submit limits for everybody.
