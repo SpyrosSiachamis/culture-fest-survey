@@ -45,6 +45,8 @@ export type VerificationStatus =
   | "already_verified"
   | "email_not_verified"
   | "already_submitted"
+  /** The reset link was forged, tampered with, expired, or already used — one status for all. */
+  | "invalid_reset_token"
   | "rate_limited"
   | "network_error"
   /** No usable session: the caller is signed out, or was never signed in. */
@@ -198,6 +200,34 @@ export function verifyEmail(email: string, code: string) {
 
 export function resendVerificationCode(email: string) {
   return post<ResendAccepted>("/accounts/verify-email/resend", { email });
+}
+
+/**
+ * Mirrors PASSWORD_RESET_TTL_MINUTES on the server. Shown in the "check your email" copy; the
+ * server is what actually enforces it.
+ */
+export const PASSWORD_RESET_TTL_MINUTES = 30;
+
+export type PasswordResetAccepted = { message: string };
+export type PasswordResetResult = { message: string };
+
+/**
+ * Ask for a reset link.
+ *
+ * The backend answers 202 with a constant message whether or not the address has an account, and
+ * the UI shows its own constant message regardless — so nothing here, including the response body,
+ * is ever rendered back to the user. The only failures worth surfacing are the ones that mean the
+ * request did not land at all (rate limit, network), which say nothing about the address.
+ */
+export function requestPasswordReset(email: string) {
+  return post<PasswordResetAccepted>("/accounts/password-reset/request", { email });
+}
+
+export function confirmPasswordReset(token: string, newPassword: string) {
+  return post<PasswordResetResult>("/accounts/password-reset/confirm", {
+    token,
+    new_password: newPassword,
+  });
 }
 
 /** The signed-in account, as returned by `/accounts/me`. */

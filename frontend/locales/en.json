@@ -78,6 +78,7 @@
     "email": "Email",
     "password": "Password",
     "noAccount": "No account yet?",
+    "forgotPassword": "Forgot your password?",
     "noAccountLink": "Sign up here",
     "enterCode": "Enter your code",
     "signedInHeading": "You're in",
@@ -139,6 +140,33 @@
     "statusLabel": "Status",
     "translationNote": "This policy is published in English and Greek. Where the two differ, the English text is the authoritative version.",
     "home": "Back to Culture Fest 2026"
+  },
+  "forgotPassword": {
+    "eyebrow": "Reset password",
+    "heading": "Forgot your password?",
+    "intro": "Enter the email address on your account and we'll send you a link to set a new password.",
+    "submit": "Send reset link",
+    "sending": "Sending",
+    "sentHeading": "Check your email",
+    "sentBody": "If an account exists for this email, we've sent a reset link. It expires in {minutes} minutes and can only be used once.",
+    "sentHint": "Nothing arrived? Check your spam folder, then try again in a minute.",
+    "backToSignIn": "Back to sign in"
+  },
+  "resetPassword": {
+    "eyebrow": "Reset password",
+    "heading": "Choose a new password",
+    "intro": "Pick something you don't use anywhere else.",
+    "newPassword": "New password",
+    "confirmPassword": "Repeat new password",
+    "submit": "Save new password",
+    "saving": "Saving",
+    "doneHeading": "Password changed",
+    "doneBody": "You can sign in with your new password now.",
+    "signIn": "Sign in",
+    "invalidHeading": "This link no longer works",
+    "invalidBody": "Reset links expire and can only be used once. Request a fresh one and we'll email it straight over.",
+    "requestNew": "Request a new link",
+    "missingToken": "This page needs the link from your reset email. Open that link, or request a new one."
   },
   "notFound": {
     "title": "Not found · Culture Fest 2026",
@@ -295,6 +323,7 @@
     "phoneDigits": "Phone number must contain between 7 and 15 digits.",
     "passwordRequired": "Enter your password.",
     "passwordShort": "Password must be at least {min} characters.",
+    "passwordMismatch": "The two passwords do not match.",
     "passwordLong": "Password must be at most 128 characters.",
     "codeRequired": "Enter the code from your email.",
     "codeFormat": "Enter the six-digit code from your email."

@@ -155,6 +155,12 @@ export default function HomePage() {
       </form>
 
       <p className="mt-6 text-sm text-bone/60">
+        <Link href="/forgot-password" className="font-semibold text-gold underline">
+          {t.login.forgotPassword}
+        </Link>
+      </p>
+
+      <p className="mt-3 text-sm text-bone/60">
         {t.login.noAccount}{" "}
         <Link href="/signup" className="font-semibold text-gold underline">
           {t.login.noAccountLink}

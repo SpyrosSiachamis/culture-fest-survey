@@ -112,6 +112,28 @@ class ResendAccepted(pydantic.BaseModel):
     message: str
     cooldown_seconds: int
 
+class PasswordResetRequest(pydantic.BaseModel):
+    """Ask for a reset link. Email only — the phone number is a login identifier elsewhere in the
+    system, but there is no channel here to send anything to, so it is not accepted."""
+    email: pydantic.EmailStr
+
+
+class PasswordResetAccepted(pydantic.BaseModel):
+    """Constant response. Says nothing about whether the address has an account."""
+    message: str
+
+
+class PasswordResetConfirm(pydantic.BaseModel):
+    token: str
+    # The same bounds AccountCreate enforces. Without them the reset path would be a way around the
+    # signup rules — set a one-character password by resetting instead of registering.
+    new_password: str = pydantic.Field(min_length=8, max_length=128)
+
+
+class PasswordResetResult(pydantic.BaseModel):
+    message: str
+
+
 class SurveyBase(pydantic.BaseModel):
     """One survey response, and the definition of what a valid answer is.
 

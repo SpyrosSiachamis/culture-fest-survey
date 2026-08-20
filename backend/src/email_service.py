@@ -192,3 +192,54 @@ def send_account_exists_email(to: str) -> None:
         html_body=_layout(heading, body_html),
         text_body=text_body,
     )
+
+
+def send_password_reset_email(to: str, reset_url: str, expires_in_minutes: int) -> None:
+    """Deliver a password-reset link. Called from a background task, so it must not raise.
+
+    The link is the credential — anyone holding it can set the password — so the body says plainly
+    what to do if the request was not the recipient's, and the message contains nothing else about
+    the account.
+    """
+    heading = "Reset your password"
+
+    body_html = f"""\
+          <p style="margin:0 0 24px;font-size:16px;line-height:1.6;color:#3f3f46;">
+            Someone asked to reset the password for your {html.escape(APP_NAME)} account. Use the
+            button below to choose a new one.
+          </p>
+          <p style="margin:0 0 24px;text-align:center;">
+            <a href="{html.escape(reset_url, quote=True)}" style="display:inline-block;padding:14px 28px;background:#ffc21a;color:#14031f;font-size:16px;font-weight:600;text-decoration:none;border-radius:8px;">
+              Choose a new password
+            </a>
+          </p>
+          <p style="margin:0 0 24px;font-size:13px;line-height:1.6;color:#71717a;word-break:break-all;">
+            Or paste this address into your browser:<br />
+            {html.escape(reset_url)}
+          </p>
+          <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#3f3f46;">
+            This link expires in {expires_in_minutes} minutes and can only be used once.
+          </p>
+          <p style="margin:0;padding-top:20px;border-top:1px solid rgba(0,0,0,0.08);font-size:13px;line-height:1.6;color:#71717a;">
+            If you did not ask for this, you can safely ignore this email — your password will not
+            change until someone opens the link above and sets a new one.
+          </p>
+"""
+
+    text_body = (
+        f"{APP_NAME}\n\n"
+        "Reset your password\n\n"
+        f"Someone asked to reset the password for your {APP_NAME} account. Open this link to "
+        "choose a new one:\n\n"
+        f"    {reset_url}\n\n"
+        f"This link expires in {expires_in_minutes} minutes and can only be used once.\n\n"
+        "If you did not ask for this, you can safely ignore this email — your password will not "
+        "change until someone opens the link and sets a new one.\n"
+    )
+
+    _send(
+        to=to,
+        subject=f"{APP_NAME}: reset your password",
+        html_body=_layout(heading, body_html),
+        text_body=text_body,
+    )
